@@ -18,7 +18,8 @@ const bucket = `${serviceAccount.project_id}.firebasestorage.app`;
 const corsConfig = [
   {
     origin: [
-      'https://tamraya.vercel.app',
+      'https://tam-ra-ya.web.app',
+      'https://tam-ra-ya.firebaseapp.com',
       'http://localhost:5173',
       'http://localhost:4173',
     ],
