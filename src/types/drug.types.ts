@@ -72,7 +72,7 @@ export interface Drug {
   status: DrugStatus;
   notes: string;
   injectionInfo?: InjectionInfo;
-  imageGdriveId?: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
   updatedBy: string;

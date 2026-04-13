@@ -2,7 +2,6 @@ import { X } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { useDoseRules } from '@/hooks/useDoseRules';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
-import { getDriveImageUrl } from '@/services/gdrive.service';
 import type { Drug } from '@/types';
 
 interface DrugDetailModalProps {
@@ -23,12 +22,12 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
         <div className="relative flex min-h-dvh w-full justify-center">
           <div className="w-full max-w-3xl rounded-[24px] bg-white shadow-floating">
             {/* Drug image */}
-            {drug.imageGdriveId ? (
+            {drug.imageUrl ? (
               <div className="overflow-hidden rounded-t-[24px] bg-subtle">
                 <img
                   alt={drug.genericName}
                   className="h-52 w-full object-contain p-4"
-                  src={getDriveImageUrl(drug.imageGdriveId)}
+                  src={drug.imageUrl}
                 />
               </div>
             ) : null}

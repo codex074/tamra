@@ -6,7 +6,7 @@ import { DrugImageUpload } from '@/components/drug/DrugImageUpload';
 import { useAuth } from '@/hooks/useAuth';
 import { DRUG_STATUS_CONFIG } from '@/lib/drug-status';
 import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
-import { deleteDriveFile, uploadDrugImage } from '@/services/gdrive.service';
+import { deleteDrugImage, uploadDrugImage } from '@/services/storage.service';
 import { drugService } from '@/services/drug.service';
 import type { DosageForm, Drug, DrugStatus, PregnancyCategory, RouteOfAdmin } from '@/types';
 
@@ -148,19 +148,19 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
     setSaveSuccess(false);
 
     // --- จัดการรูปภาพ ---
-    let imageGdriveId = initialDrug?.imageGdriveId ?? '';
+    let imageUrl = initialDrug?.imageUrl ?? '';
 
     try {
       if (pendingImageFile) {
         setUploading(true);
-        if (initialDrug?.imageGdriveId) {
-          await deleteDriveFile(initialDrug.imageGdriveId);
+        if (initialDrug?.imageUrl) {
+          await deleteDrugImage(initialDrug.imageUrl);
         }
-        imageGdriveId = await uploadDrugImage(pendingImageFile, values.genericName);
+        imageUrl = await uploadDrugImage(pendingImageFile, values.genericName);
         setUploading(false);
-      } else if (imageMarkedForDeletion && initialDrug?.imageGdriveId) {
-        await deleteDriveFile(initialDrug.imageGdriveId);
-        imageGdriveId = '';
+      } else if (imageMarkedForDeletion && initialDrug?.imageUrl) {
+        await deleteDrugImage(initialDrug.imageUrl);
+        imageUrl = '';
       }
     } catch (err) {
       setUploading(false);
@@ -179,7 +179,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
       status: selectedStatus,
       route: selectedRoutes,
       updatedBy: user?.uid ?? 'unknown',
-      imageGdriveId,
+      imageUrl,
       injectionInfo: values.dosageForm === 'injection'
         ? {
             reconstitutionForm: values.reconstitutionForm,
@@ -240,7 +240,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
 
       {/* รูปภาพยา */}
       <DrugImageUpload
-        currentFileId={initialDrug?.imageGdriveId}
+        currentUrl={initialDrug?.imageUrl}
         markedForDeletion={imageMarkedForDeletion}
         onFileSelect={setPendingImageFile}
         onMarkForDeletion={setImageMarkedForDeletion}

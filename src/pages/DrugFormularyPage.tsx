@@ -6,7 +6,6 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
-import { getDriveImageUrl } from '@/services/gdrive.service';
 import type { Drug } from '@/types';
 
 export function DrugFormularyPage(): JSX.Element {
@@ -88,11 +87,11 @@ export function DrugFormularyPage(): JSX.Element {
                 type="button"
               >
                 <div className="flex min-w-0 items-start gap-3">
-                  {drug.imageGdriveId ? (
+                  {drug.imageUrl ? (
                     <img
                       alt={drug.genericName}
                       className="h-14 w-14 shrink-0 rounded-[10px] border border-line object-contain p-1"
-                      src={getDriveImageUrl(drug.imageGdriveId)}
+                      src={drug.imageUrl}
                     />
                   ) : null}
                   <div className="min-w-0 flex-1">
