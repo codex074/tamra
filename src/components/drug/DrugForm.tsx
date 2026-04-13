@@ -2,9 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { DrugImageUpload } from '@/components/drug/DrugImageUpload';
 import { useAuth } from '@/hooks/useAuth';
 import { DRUG_STATUS_CONFIG } from '@/lib/drug-status';
 import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
+import { deleteDriveFile, uploadDrugImage } from '@/services/gdrive.service';
 import { drugService } from '@/services/drug.service';
 import type { DosageForm, Drug, DrugStatus, PregnancyCategory, RouteOfAdmin } from '@/types';
 
@@ -22,7 +24,6 @@ const drugSchema = z.object({
   pregnancyCategory: z.enum(['A', 'B', 'C', 'D', 'X', 'N/A']),
   g6pdSafe: z.boolean(),
   storage: z.string(),
-  pricePerUnit: z.number().min(0).optional(),
   status: z.enum(['had', 'uc_free', 'staff_order', 'ned_national', 'all_rights', 'ocpa', 'ned_only', 'restrict_atb', 'self_pay', 'self_pay2']),
   notes: z.string(),
   reconstitutionForm: z.string().optional(),
@@ -61,7 +62,6 @@ function getDefaultValues(drug?: Drug | null): DrugFormValues {
     pregnancyCategory: drug?.pregnancyCategory ?? 'N/A',
     g6pdSafe: drug?.g6pdSafe ?? true,
     storage: drug?.storage ?? 'เก็บที่อุณหภูมิห้อง',
-    pricePerUnit: drug?.pricePerUnit ?? 0,
     status: drug?.status ?? 'all_rights',
     notes: drug?.notes ?? '',
     reconstitutionForm: drug?.injectionInfo?.reconstitutionForm ?? '',
@@ -79,9 +79,13 @@ function getDefaultValues(drug?: Drug | null): DrugFormValues {
 export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFormProps): JSX.Element {
   const { user } = useAuth();
   const isEditing = Boolean(initialDrug);
+
   const [selectedRoutes, setSelectedRoutes] = useState<RouteOfAdmin[]>(initialDrug?.route ?? ['oral']);
   const [selectedStatus, setSelectedStatus] = useState<DrugStatus>(initialDrug?.status ?? 'all_rights');
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [imageMarkedForDeletion, setImageMarkedForDeletion] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -100,6 +104,8 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
     reset(getDefaultValues(initialDrug));
     setSelectedRoutes(initialDrug?.route ?? ['oral']);
     setSelectedStatus(initialDrug?.status ?? 'all_rights');
+    setPendingImageFile(null);
+    setImageMarkedForDeletion(false);
     setSaveError(null);
     setSaveSuccess(false);
   }, [initialDrug, reset]);
@@ -116,6 +122,8 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
     reset(getDefaultValues(null));
     setSelectedRoutes(['oral']);
     setSelectedStatus('all_rights');
+    setPendingImageFile(null);
+    setImageMarkedForDeletion(false);
     setSaveError(null);
     setSaveSuccess(false);
   }
@@ -133,21 +141,45 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
         : 'ระบบจะสร้างรายการยาใหม่จากข้อมูลที่กรอกไว้',
       confirmButtonText: isEditing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการยา',
     });
-
     if (!confirmed) return;
 
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
 
+    // --- จัดการรูปภาพ ---
+    let imageGdriveId = initialDrug?.imageGdriveId ?? '';
+
+    try {
+      if (pendingImageFile) {
+        setUploading(true);
+        if (initialDrug?.imageGdriveId) {
+          await deleteDriveFile(initialDrug.imageGdriveId);
+        }
+        imageGdriveId = await uploadDrugImage(pendingImageFile, values.genericName);
+        setUploading(false);
+      } else if (imageMarkedForDeletion && initialDrug?.imageGdriveId) {
+        await deleteDriveFile(initialDrug.imageGdriveId);
+        imageGdriveId = '';
+      }
+    } catch (err) {
+      setUploading(false);
+      const msg = err instanceof Error ? err.message : 'อัปโหลดรูปไม่สำเร็จ';
+      setSaveError(msg);
+      setSaving(false);
+      return;
+    }
+
+    // --- บันทึก Firestore ---
     const payload = {
       ...values,
       dosageForm: values.dosageForm as DosageForm,
       pregnancyCategory: values.pregnancyCategory as PregnancyCategory,
-      pricePerUnit: values.pricePerUnit ?? 0,
+      pricePerUnit: 0,
       status: selectedStatus,
       route: selectedRoutes,
       updatedBy: user?.uid ?? 'unknown',
+      imageGdriveId,
       injectionInfo: values.dosageForm === 'injection'
         ? {
             reconstitutionForm: values.reconstitutionForm,
@@ -170,9 +202,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
         await drugService.create(payload);
       }
       setSaveSuccess(true);
-      if (!initialDrug) {
-        clearForm();
-      }
+      if (!initialDrug) clearForm();
       await onSuccess?.();
       await showSuccessAlert(
         isEditing ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มรายการยาสำเร็จ',
@@ -200,16 +230,23 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
         {isEditing ? (
           <button
             className="rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink"
-            onClick={() => {
-              clearForm();
-              onCancelEdit?.();
-            }}
+            onClick={() => { clearForm(); onCancelEdit?.(); }}
             type="button"
           >
             ยกเลิกการแก้ไข
           </button>
         ) : null}
       </div>
+
+      {/* รูปภาพยา */}
+      <DrugImageUpload
+        currentFileId={initialDrug?.imageGdriveId}
+        markedForDeletion={imageMarkedForDeletion}
+        onFileSelect={setPendingImageFile}
+        onMarkForDeletion={setImageMarkedForDeletion}
+        pendingFile={pendingImageFile}
+        uploading={uploading}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
@@ -241,24 +278,22 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted">รูปแบบยา</label>
-          <select className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('dosageForm')}>
-            <option value="tablet">Tablet</option>
-            <option value="capsule">Capsule</option>
-            <option value="injection">Injection</option>
-            <option value="solution">Solution</option>
-            <option value="suspension">Suspension</option>
-            <option value="cream">Cream</option>
-            <option value="ointment">Ointment</option>
-            <option value="patch">Patch</option>
-            <option value="inhaler">Inhaler</option>
-            <option value="suppository">Suppository</option>
-            <option value="drops">Drops</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted">รูปแบบยา</label>
+        <select className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('dosageForm')}>
+          <option value="tablet">Tablet</option>
+          <option value="capsule">Capsule</option>
+          <option value="injection">Injection</option>
+          <option value="solution">Solution</option>
+          <option value="suspension">Suspension</option>
+          <option value="cream">Cream</option>
+          <option value="ointment">Ointment</option>
+          <option value="patch">Patch</option>
+          <option value="inhaler">Inhaler</option>
+          <option value="suppository">Suppository</option>
+          <option value="drops">Drops</option>
+          <option value="other">Other</option>
+        </select>
       </div>
 
       <div>
@@ -290,9 +325,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
           {ROUTES.map((route) => (
             <button
               className={`rounded-xl px-3 py-1.5 text-xs font-medium transition ${
-                selectedRoutes.includes(route)
-                  ? 'bg-ink text-white'
-                  : 'bg-subtle text-muted shadow-ring'
+                selectedRoutes.includes(route) ? 'bg-ink text-white' : 'bg-subtle text-muted shadow-ring'
               }`}
               key={route}
               onClick={() => toggleRoute(route)}
@@ -306,7 +339,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
 
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">ข้อบ่งใช้ (Indication)</label>
-        <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ข้อบ่งใช้ของยา" rows={2} {...register('indication')} />
+        <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" rows={2} {...register('indication')} />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -329,12 +362,9 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">Pregnancy category</label>
           <select className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('pregnancyCategory')}>
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
-            <option value="X">X</option>
-            <option value="N/A">N/A</option>
+            {(['A', 'B', 'C', 'D', 'X', 'N/A'] as const).map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
           </select>
         </div>
         <div>
@@ -349,7 +379,6 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
       {dosageForm === 'injection' && (
         <div className="grid gap-4 rounded-[16px] border border-line p-4">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการผสมยา (Reconstitution &amp; Solution)</p>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">รูปแบบผงยา</label>
@@ -360,7 +389,6 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
               <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 10 mL SW" {...register('reconstitutionVolume')} />
             </div>
           </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">ชนิดสารละลายที่เข้ากัน</label>
@@ -368,34 +396,30 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">ปริมาตรสารละลาย (Dilution)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น ~100 mL (ไม่เกิน 5 mg/mL)" {...register('dilutionVolume')} />
+              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น ~100 mL" {...register('dilutionVolume')} />
             </div>
           </div>
-
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ความคงตัว (Stability)</p>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">อุณหภูมิ 2-8 °C (ก่อนผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 24 ชม." {...register('stability2_8C')} />
+              <label className="mb-1 block text-xs font-medium text-muted">2-8 °C (ก่อนผสม)</label>
+              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stability2_8C')} />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">อุณหภูมิห้อง 25 °C (ก่อนผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 12 ชม." {...register('stabilityRoom')} />
+              <label className="mb-1 block text-xs font-medium text-muted">อุณหภูมิห้อง (ก่อนผสม)</label>
+              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stabilityRoom')} />
             </div>
           </div>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">2-8 °C (หลังผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 7 วัน" {...register('stability2_8CAfterMix')} />
+              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stability2_8CAfterMix')} />
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">อุณหภูมิห้อง (หลังผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 2 ชม." {...register('stabilityRoomAfterMix')} />
+              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stabilityRoomAfterMix')} />
             </div>
           </div>
-
           <div>
             <label className="mb-1 block text-xs font-medium text-muted">อ้างอิง (URL)</label>
             <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="https://..." type="url" {...register('injectionReference')} />
@@ -412,18 +436,16 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
 
       <div className="flex flex-wrap gap-3">
         <button
-          className="rounded-xl bg-ink px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-pill bg-ink px-6 py-2.5 text-sm font-medium text-white disabled:opacity-50"
           disabled={saving}
           type="submit"
         >
-          {saving ? 'กำลังบันทึก...' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูลยา'}
+          {uploading ? 'กำลังอัปโหลดรูป...' : saving ? 'กำลังบันทึก...' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูลยา'}
         </button>
         {!isEditing ? (
           <button
-            className="rounded-xl border border-line px-4 py-3 text-sm font-medium text-muted transition hover:border-ink hover:text-ink"
-            onClick={() => {
-              clearForm();
-            }}
+            className="rounded-pill border border-line px-6 py-2.5 text-sm font-medium text-muted transition hover:border-ink hover:text-ink"
+            onClick={clearForm}
             type="button"
           >
             ล้างฟอร์ม

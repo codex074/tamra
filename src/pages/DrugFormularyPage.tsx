@@ -6,6 +6,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
+import { getDriveImageUrl } from '@/services/gdrive.service';
 import type { Drug } from '@/types';
 
 export function DrugFormularyPage(): JSX.Element {
@@ -86,7 +87,15 @@ export function DrugFormularyPage(): JSX.Element {
                 onClick={() => setSelectedDrug(drug)}
                 type="button"
               >
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-start gap-3">
+                  {drug.imageGdriveId ? (
+                    <img
+                      alt={drug.genericName}
+                      className="h-14 w-14 shrink-0 rounded-[10px] border border-line object-contain p-1"
+                      src={getDriveImageUrl(drug.imageGdriveId)}
+                    />
+                  ) : null}
+                  <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
                   <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
                   {drug.genericNameTH ? (
@@ -101,6 +110,7 @@ export function DrugFormularyPage(): JSX.Element {
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
                       {getStatusLabel(drug.status)}
                     </span>
+                  </div>
                   </div>
                 </div>
 
