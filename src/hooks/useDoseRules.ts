@@ -4,19 +4,16 @@ import type { DoseRule } from '@/types';
 
 export function useDoseRules(drugId?: string): { rules: DoseRule[]; loading: boolean } {
   const [rules, setRules] = useState<DoseRule[]>([]);
-  const [loading, setLoading] = useState(false);
+  const isEnabled = Boolean(drugId);
 
   useEffect(() => {
-    if (!drugId) {
-      setRules([]);
+    if (!isEnabled || !drugId) {
       return;
     }
-    setLoading(true);
     void doseRuleService.getByDrugId(drugId).then((data) => {
       setRules(data);
-      setLoading(false);
     });
-  }, [drugId]);
+  }, [drugId, isEnabled]);
 
-  return { rules, loading };
+  return { rules: isEnabled ? rules : [], loading: false };
 }

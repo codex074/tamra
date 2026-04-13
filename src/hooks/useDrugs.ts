@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { drugService } from '@/services/drug.service';
 import type { Drug, DrugStatus } from '@/types';
 
@@ -12,7 +12,7 @@ export function useDrugs(filters?: { status?: DrugStatus }): {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetchDrugs(): Promise<void> {
+  const fetchDrugs = useCallback(async (): Promise<void> => {
     setLoading(true);
     setError(null);
     try {
@@ -22,11 +22,11 @@ export function useDrugs(filters?: { status?: DrugStatus }): {
     } finally {
       setLoading(false);
     }
-  }
+  }, [filters]);
 
   useEffect(() => {
     void fetchDrugs();
-  }, [filters?.status]);
+  }, [fetchDrugs]);
 
   return { drugs, loading, error, refetch: fetchDrugs };
 }

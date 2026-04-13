@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useState } from 'react';
-import { useForm, type Resolver } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { drugService } from '@/services/drug.service';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,8 +55,7 @@ export function DrugForm(): JSX.Element {
     watch,
     formState: { errors },
   } = useForm<DrugFormValues>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(drugSchema) as Resolver<DrugFormValues>,
+    resolver: zodResolver(drugSchema),
     defaultValues: {
       genericName: '',
       genericNameTH: '',
@@ -98,6 +97,7 @@ export function DrugForm(): JSX.Element {
         ...values,
         dosageForm: values.dosageForm as DosageForm,
         pregnancyCategory: values.pregnancyCategory as PregnancyCategory,
+        pricePerUnit: values.pricePerUnit ?? 0,
         status: selectedStatus,
         route: selectedRoutes,
         updatedBy: user?.uid ?? 'unknown',

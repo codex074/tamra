@@ -7,19 +7,16 @@ export function useIVCompat(drugIds: string[], solution: IVSolution): {
   loading: boolean;
 } {
   const [matrix, setMatrix] = useState<Record<string, IVCompatibility | null>>({});
-  const [loading, setLoading] = useState(false);
+  const hasEnoughDrugs = drugIds.length >= 2;
 
   useEffect(() => {
-    if (drugIds.length < 2) {
-      setMatrix({});
+    if (!hasEnoughDrugs) {
       return;
     }
-    setLoading(true);
     void ivCompatService.getMatrix(drugIds, solution).then((data) => {
       setMatrix(data);
-      setLoading(false);
     });
-  }, [drugIds, solution]);
+  }, [drugIds, hasEnoughDrugs, solution]);
 
-  return { matrix, loading };
+  return { matrix: hasEnoughDrugs ? matrix : {}, loading: false };
 }
