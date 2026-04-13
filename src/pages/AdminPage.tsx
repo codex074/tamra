@@ -8,14 +8,16 @@ const auditRows = [
 
 export function AdminPage(): JSX.Element {
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <div className="space-y-4">
-        <section className="rounded-[32px] bg-white p-6 shadow-card">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Admin Panel</p>
-          <h1 className="mt-4 text-5xl font-semibold tracking-[-0.09em] text-ink">Manage formulary content and operational visibility.</h1>
-        </section>
-        <DrugForm />
-      </div>
+    <div className="space-y-6">
+      <section className="rounded-[32px] bg-white p-6 shadow-card lg:p-8">
+        <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Admin Panel</p>
+        <h1 className="mt-4 max-w-5xl text-4xl font-semibold tracking-[-0.09em] text-ink sm:text-5xl lg:text-6xl">
+          Manage formulary content and operational visibility.
+        </h1>
+      </section>
+
+      <DrugForm />
+
       <section className="rounded-[32px] bg-white p-6 shadow-card">
         <div className="flex items-center justify-between">
           <div>
@@ -24,7 +26,7 @@ export function AdminPage(): JSX.Element {
           </div>
           <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">Admin only</span>
         </div>
-        <div className="mt-6 overflow-hidden rounded-3xl shadow-ring">
+        <div className="mt-6 overflow-x-auto rounded-3xl shadow-ring">
           <table className="min-w-full">
             <thead className="bg-subtle text-left text-xs uppercase tracking-[0.2em] text-muted">
               <tr>

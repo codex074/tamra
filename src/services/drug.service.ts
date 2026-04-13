@@ -15,6 +15,32 @@ import type { Drug, DrugStatus } from '@/types';
 
 const COL = 'drugs';
 
+function getDrugKey(drug: Pick<Drug, 'genericName' | 'strength' | 'dosageForm'>): string {
+  return `${drug.genericName}|${drug.strength}|${drug.dosageForm}`.toLowerCase();
+}
+
+function mergeDrugSources(primary: Drug[], secondary: Drug[]): Drug[] {
+  const seen = new Set(primary.map(getDrugKey));
+  const merged = [...primary];
+  for (const drug of secondary) {
+    const key = getDrugKey(drug);
+    if (!seen.has(key)) {
+      merged.push(drug);
+      seen.add(key);
+    }
+  }
+  return merged.sort((a, b) => a.genericName.localeCompare(b.genericName));
+}
+
+let fallbackDrugsPromise: Promise<Drug[]> | null = null;
+
+async function loadFallbackDrugs(): Promise<Drug[]> {
+  fallbackDrugsPromise ??= import('@/lib/imported-drugs')
+    .then(({ importedDrugs }) => mergeDrugSources(importedDrugs, mockDrugs))
+    .catch(() => mockDrugs);
+  return fallbackDrugsPromise;
+}
+
 export const drugService = {
   async getAll(filters?: { status?: DrugStatus; therapeuticClass?: string }): Promise<Drug[]> {
     try {
@@ -26,9 +52,11 @@ export const drugService = {
         q = query(q, where('therapeuticClass', '==', filters.therapeuticClass));
       }
       const snap = await getDocs(q);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Drug);
+      const firestoreDrugs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Drug);
+      return firestoreDrugs.length ? firestoreDrugs : loadFallbackDrugs();
     } catch {
-      return mockDrugs.filter((drug) => {
+      const fallbackDrugs = await loadFallbackDrugs();
+      return fallbackDrugs.filter((drug) => {
         const statusMatch = filters?.status ? drug.status === filters.status : true;
         const classMatch = filters?.therapeuticClass ? drug.therapeuticClass === filters.therapeuticClass : true;
         return statusMatch && classMatch;
