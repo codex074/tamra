@@ -27,6 +27,7 @@ export function AdminPage(): JSX.Element {
   const [isManageListOpen, setIsManageListOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [page, setPage] = useState(1);
 
   const filteredDrugs = useMemo(
@@ -89,6 +90,28 @@ export function AdminPage(): JSX.Element {
     }
   }
 
+  async function handleCleanupLocalCache(): Promise<void> {
+    const confirmed = await confirmAction({
+      title: 'ล้างข้อมูลแคชในเครื่อง',
+      text: 'ระบบจะลบ local overrides ที่ค้างอยู่ใน browser เครื่องนี้ แล้วโหลดข้อมูลใหม่จาก Firestore อีกครั้ง',
+      confirmButtonText: 'ล้างแคช',
+      icon: 'warning',
+    });
+    if (!confirmed) return;
+
+    try {
+      drugService.clearLocalOverrides();
+      setCleanupMessage('ล้าง local cache ของรายการยาเรียบร้อยแล้ว');
+      setDeleteError(null);
+      await refetch();
+      await showSuccessAlert('ล้างแคชสำเร็จ', 'ข้อมูลในเครื่องถูกรีเซ็ตแล้ว และระบบได้ดึงข้อมูลล่าสุดกลับมาใหม่');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ล้าง local cache ไม่สำเร็จ';
+      setCleanupMessage(null);
+      await showErrorAlert('ล้างแคชไม่สำเร็จ', message);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] bg-white p-6 shadow-card lg:p-8">
@@ -127,6 +150,20 @@ export function AdminPage(): JSX.Element {
             </p>
           </button>
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-dashed border-line bg-subtle px-4 py-3">
+          <p className="text-sm text-muted">
+            ถ้า browser ยังจำข้อมูลเก่าจนรูปหรือรายการยาไม่อัปเดต สามารถล้าง local cache ของเครื่องนี้ได้จากปุ่มด้านขวา
+          </p>
+          <button
+            className="inline-flex items-center rounded-pill border border-line bg-white px-4 py-2 text-sm font-medium text-ink transition hover:border-ink hover:text-ink"
+            onClick={() => void handleCleanupLocalCache()}
+            type="button"
+          >
+            Cleanup local cache
+          </button>
+        </div>
+        {cleanupMessage ? <p className="mt-3 text-sm text-success">{cleanupMessage}</p> : null}
       </section>
 
       {user?.isDemo ? (

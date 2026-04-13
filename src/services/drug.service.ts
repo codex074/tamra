@@ -184,6 +184,11 @@ function buildLocalDrug(data: Omit<Drug, 'id' | 'createdAt' | 'updatedAt'>, id?:
 }
 
 export const drugService = {
+  clearLocalOverrides(): void {
+    writeLocalDrugs([]);
+    writeDeletedIds([]);
+  },
+
   async getAll(filters?: { status?: DrugStatus; therapeuticClass?: string }): Promise<Drug[]> {
     try {
       let q = query(collection(db, COL), orderBy('genericName'));

@@ -5,7 +5,7 @@ import { useUIStore } from '@/store/ui.store';
 import { cn } from '@/lib/utils';
 
 const publicLinks = [
-  { to: '/formulary', label: 'Drug Formulary', icon: Pill },
+  { to: '/formulary', label: 'Drug Information', icon: Pill },
   { to: '/iv-compatibility', label: 'IV Compatibility', icon: TestTubeDiagonal },
 ];
 
@@ -20,11 +20,17 @@ function SidebarContent({ onClose }: { onClose?: () => void }): JSX.Element {
     <aside className="flex h-full w-72 flex-col bg-white px-4 py-8 lg:border-r lg:border-line">
       {/* Wordmark + close button (mobile) */}
       <div className="mb-8 flex items-start justify-between px-2">
-        <div>
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-primary">Tam-Ra-Ya</p>
-          <h1 className="mt-2 text-3xl font-semibold leading-tight text-ink">ตำรายา</h1>
+        <div className="flex flex-col items-start">
+          <div className="flex items-center gap-3">
+            <img
+              alt="Uttaradit Hospital logo"
+              className="h-12 w-12 rounded-2xl object-contain"
+              src="/hoslogo.png"
+            />
+            <p className="text-lg font-semibold uppercase leading-none tracking-[0.14em] text-primary">Tam-Ra-Ya</p>
+          </div>
           <p className="mt-1.5 text-xs leading-relaxed text-muted">
-            Hospital formulary · IV compat
+            Pharmacy Department - Uttaradit Hospital
           </p>
         </div>
         {onClose ? (

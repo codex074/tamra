@@ -1,0 +1,31 @@
+{
+  "name": "TAM-RAA-YAA",
+  "short_name": "Tam-Ra-Ya",
+  "description": "Drug information, IV compatibility, dose support, and formulary management for hospital workflows.",
+  "start_url": "/formulary",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF5FF",
+  "theme_color": "#3157D6",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
