@@ -13,6 +13,7 @@ export function DrugFormularyPage(): JSX.Element {
   const [query, setQuery] = useState('');
   const [selectedDrug, setSelectedDrug] = useState<Drug | null>(null);
   const [page, setPage] = useState(1);
+  const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
 
   const filtered = useMemo(
     () =>
@@ -39,6 +40,10 @@ export function DrugFormularyPage(): JSX.Element {
   useEffect(() => {
     setPage((current) => Math.min(current, totalPages));
   }, [totalPages]);
+
+  function markImageBroken(drugId: string): void {
+    setBrokenImageIds((current) => (current.includes(drugId) ? current : [...current, drugId]));
+  }
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorAlert message={error} onRetry={() => void refetch()} />;
@@ -92,8 +97,13 @@ export function DrugFormularyPage(): JSX.Element {
               >
                 {/* Thumbnail */}
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-line bg-subtle">
-                  {drug.imageUrl ? (
-                    <img alt={drug.genericName} className="h-full w-full object-contain p-1" src={drug.imageUrl} />
+                  {drug.imageUrl && !brokenImageIds.includes(drug.id) ? (
+                    <img
+                      alt={drug.genericName}
+                      className="h-full w-full object-contain p-1"
+                      onError={() => markImageBroken(drug.id)}
+                      src={drug.imageUrl}
+                    />
                   ) : (
                     <span className="text-[10px] font-bold text-muted/40 uppercase">{drug.dosageForm.slice(0, 3)}</span>
                   )}

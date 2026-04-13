@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useState } from 'react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import { formatRouteList } from '@/lib/route-label';
@@ -11,6 +12,7 @@ interface DrugDetailModalProps {
 
 export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.Element {
   const statusColor = getStatusColor(drug.status);
+  const [imageBroken, setImageBroken] = useState(false);
 
   return (
     <ModalPortal>
@@ -21,11 +23,12 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
         <div className="relative flex min-h-dvh w-full justify-center">
           <div className="w-full max-w-3xl rounded-[24px] bg-white shadow-floating">
             {/* Drug image */}
-            {drug.imageUrl ? (
+            {drug.imageUrl && !imageBroken ? (
               <div className="overflow-hidden rounded-t-[24px] bg-subtle">
                 <img
                   alt={drug.genericName}
                   className="h-52 w-full object-contain p-4"
+                  onError={() => setImageBroken(true)}
                   src={drug.imageUrl}
                 />
               </div>
