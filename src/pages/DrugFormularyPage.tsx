@@ -5,6 +5,7 @@ import { DrugSearchBar } from '@/components/drug/DrugSearchBar';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
+import { getStatusColor } from '@/lib/drug-status';
 import type { Drug } from '@/types';
 
 export function DrugFormularyPage(): JSX.Element {
@@ -81,6 +82,7 @@ export function DrugFormularyPage(): JSX.Element {
 
         <div className="divide-y divide-line">
           {paginatedDrugs.map((drug) => {
+            const statusColor = getStatusColor(drug.status);
             const label = [
               drug.genericName,
               drug.strength,
@@ -110,7 +112,7 @@ export function DrugFormularyPage(): JSX.Element {
                 </div>
 
                 {/* Name */}
-                <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{label}</p>
+                <p className="min-w-0 flex-1 truncate text-sm font-medium" style={{ color: statusColor }}>{label}</p>
 
                 {/* Arrow */}
                 <ChevronRightIcon className="shrink-0 text-primary" size={20} strokeWidth={1.5} />

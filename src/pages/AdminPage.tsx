@@ -29,6 +29,7 @@ export function AdminPage(): JSX.Element {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
 
   const filteredDrugs = useMemo(
     () =>
@@ -54,6 +55,10 @@ export function AdminPage(): JSX.Element {
   useEffect(() => {
     setPage((current) => Math.min(current, totalPages));
   }, [totalPages]);
+
+  function markImageBroken(drugId: string): void {
+    setBrokenImageIds((current) => (current.includes(drugId) ? current : [...current, drugId]));
+  }
 
   async function refreshAdminData(): Promise<void> {
     await refetch();
@@ -221,18 +226,35 @@ export function AdminPage(): JSX.Element {
 
                     return (
                       <article className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto] md:items-center" key={drug.id}>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
-                          <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
-                          <p className="mt-1 truncate text-sm text-muted">{drug.tradeName}</p>
-                          <div className="mt-3">
-                            <span
-                              className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium"
-                              style={{ color: statusColor, backgroundColor: `${statusColor}18` }}
-                            >
-                              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
-                              {getStatusLabel(drug.status)}
-                            </span>
+                        <div className="flex min-w-0 items-start gap-4">
+                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[14px] border border-line bg-subtle">
+                            {drug.imageUrl && !brokenImageIds.includes(drug.id) ? (
+                              <img
+                                alt={drug.genericName}
+                                className="h-full w-full object-contain p-1.5"
+                                onError={() => markImageBroken(drug.id)}
+                                src={drug.imageUrl}
+                              />
+                            ) : (
+                              <span className="text-xs font-bold uppercase text-muted/40">
+                                {drug.dosageForm.slice(0, 3)}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
+                            <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
+                            <p className="mt-1 truncate text-sm text-muted">{drug.tradeName}</p>
+                            <div className="mt-3">
+                              <span
+                                className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium"
+                                style={{ color: statusColor, backgroundColor: `${statusColor}18` }}
+                              >
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
+                                {getStatusLabel(drug.status)}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
@@ -338,15 +360,18 @@ export function AdminPage(): JSX.Element {
       {editingDrug ? (
         <ModalPortal>
           <div
-            className="fixed inset-0 z-[999] overflow-y-auto p-4 pt-10 md:p-6 md:pt-12"
+            className="fixed inset-0 z-[999] overflow-y-auto bg-white/10 p-4 pt-10 md:p-6 md:pt-12"
             onClick={(event) => {
               if (event.target === event.currentTarget) {
                 setEditingDrug(null);
               }
             }}
           >
-            <div className="relative flex min-h-dvh w-full justify-center">
-              <div className="relative w-full max-w-5xl">
+            <div className="pointer-events-none flex w-full justify-center">
+              <div
+                className="pointer-events-auto relative w-full max-w-5xl"
+                onClick={(event) => event.stopPropagation()}
+              >
                 <button
                   aria-label="ปิด modal แก้ไขยา"
                   className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-card transition hover:border-ink hover:text-ink"
@@ -373,15 +398,18 @@ export function AdminPage(): JSX.Element {
       {isCreateModalOpen ? (
         <ModalPortal>
           <div
-            className="fixed inset-0 z-[999] overflow-y-auto p-4 pt-10 md:p-6 md:pt-12"
+            className="fixed inset-0 z-[999] overflow-y-auto bg-white/10 p-4 pt-10 md:p-6 md:pt-12"
             onClick={(event) => {
               if (event.target === event.currentTarget) {
                 setIsCreateModalOpen(false);
               }
             }}
           >
-            <div className="relative flex min-h-dvh w-full justify-center">
-              <div className="relative w-full max-w-5xl">
+            <div className="pointer-events-none flex w-full justify-center">
+              <div
+                className="pointer-events-auto relative w-full max-w-5xl"
+                onClick={(event) => event.stopPropagation()}
+              >
                 <button
                   aria-label="ปิด modal เพิ่มยา"
                   className="absolute right-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-card transition hover:border-ink hover:text-ink"

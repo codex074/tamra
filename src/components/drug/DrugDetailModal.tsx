@@ -17,11 +17,22 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
   return (
     <ModalPortal>
       <div
-        className="fixed inset-0 z-[999] overflow-y-auto p-4 pt-16"
+        className="fixed inset-0 z-[999] overflow-y-auto bg-white/10 p-4 pt-16"
         onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
-        <div className="relative flex min-h-dvh w-full justify-center">
-          <div className="w-full max-w-3xl rounded-[24px] bg-white shadow-floating">
+        <div className="pointer-events-none flex w-full justify-center">
+          <div
+            className="pointer-events-auto relative w-full max-w-3xl rounded-[24px] bg-white shadow-floating"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute right-4 top-4 z-10 shrink-0 rounded-pill border border-line bg-white/90 p-2 text-muted shadow-sm backdrop-blur transition hover:border-ink hover:text-ink"
+              onClick={onClose}
+              type="button"
+            >
+              <X size={16} />
+            </button>
+
             {/* Drug image */}
             {drug.imageUrl && !imageBroken ? (
               <div className="overflow-hidden rounded-t-[24px] bg-subtle">
@@ -35,7 +46,7 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
             ) : null}
 
             {/* Header */}
-            <div className="flex items-start justify-between gap-4 p-6 pb-0">
+            <div className="p-6 pb-0 pr-20">
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-primary">
                   {drug.therapeuticClass}
@@ -53,13 +64,6 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
                   {getStatusLabel(drug.status)}
                 </span>
               </div>
-              <button
-                className="mt-1 shrink-0 rounded-pill border border-line p-2 text-muted transition hover:border-ink hover:text-ink"
-                onClick={onClose}
-                type="button"
-              >
-                <X size={16} />
-              </button>
             </div>
 
             {/* Body */}
