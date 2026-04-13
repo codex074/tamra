@@ -100,9 +100,10 @@ export async function deleteDriveFile(fileId: string): Promise<void> {
   }
 }
 
-/** สร้าง URL สำหรับแสดงรูปจาก Google Drive file ID */
+/** สร้าง URL สำหรับแสดงรูปจาก Google Drive file ID
+ *  ใช้ uc?export=view เพื่อให้ public access เห็นได้โดยไม่ต้อง login */
 export function getDriveImageUrl(fileId: string): string {
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w800`;
+  return `https://drive.google.com/uc?export=view&id=${fileId}`;
 }
 
 export const gdriveConfigured = Boolean(CLIENT_ID);
