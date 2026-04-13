@@ -1,7 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { DrugDetailModal } from '@/components/drug/DrugDetailModal';
-import { DrugFilterPanel } from '@/components/drug/DrugFilterPanel';
 import { DrugSearchBar } from '@/components/drug/DrugSearchBar';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
@@ -13,23 +12,19 @@ export function DrugFormularyPage(): JSX.Element {
   const pageSize = 10;
   const { drugs, loading, error, refetch } = useDrugs();
   const [query, setQuery] = useState('');
-  const [therapeuticClass, setTherapeuticClass] = useState('');
   const [selectedDrug, setSelectedDrug] = useState<Drug | null>(null);
   const [page, setPage] = useState(1);
 
   const filtered = useMemo(
     () =>
-      drugs.filter((drug) => {
-        const matchesQuery =
-          query.length === 0 ||
-          [drug.genericName, drug.tradeName, drug.therapeuticClass, drug.indication]
-            .join(' ')
-            .toLowerCase()
-            .includes(query.toLowerCase());
-        const matchesClass = therapeuticClass.length === 0 || drug.therapeuticClass === therapeuticClass;
-        return matchesQuery && matchesClass;
-      }),
-    [drugs, query, therapeuticClass],
+      drugs.filter((drug) =>
+        query.length === 0 ||
+        [drug.genericName, drug.genericNameTH, drug.tradeName, drug.therapeuticClass, drug.indication]
+          .join(' ')
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+      ),
+    [drugs, query],
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -40,7 +35,7 @@ export function DrugFormularyPage(): JSX.Element {
 
   useEffect(() => {
     setPage(1);
-  }, [query, therapeuticClass]);
+  }, [query]);
 
   useEffect(() => {
     setPage((current) => Math.min(current, totalPages));
@@ -59,15 +54,8 @@ export function DrugFormularyPage(): JSX.Element {
         </h1>
       </div>
 
-      {/* Single search box */}
+      {/* Search box */}
       <DrugSearchBar onChange={setQuery} value={query} />
-
-      {/* Filter chips — inline below search */}
-      <DrugFilterPanel
-        drugs={drugs}
-        setTherapeuticClass={setTherapeuticClass}
-        therapeuticClass={therapeuticClass}
-      />
 
       {/* Result count */}
       <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
@@ -76,10 +64,8 @@ export function DrugFormularyPage(): JSX.Element {
             ? `${drugs.length} รายการ`
             : `${filtered.length} จาก ${drugs.length} รายการ`}
         </p>
-        {filtered.length ? (
-          <p>
-            หน้า {page} / {totalPages}
-          </p>
+        {filtered.length > 0 ? (
+          <p>หน้า {page} / {totalPages}</p>
         ) : null}
       </div>
 
@@ -103,6 +89,9 @@ export function DrugFormularyPage(): JSX.Element {
                 <div className="min-w-0">
                   <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
                   <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
+                  {drug.genericNameTH ? (
+                    <p className="mt-0.5 text-sm text-muted">{drug.genericNameTH}</p>
+                  ) : null}
                   <p className="mt-1 truncate text-sm text-muted">{drug.tradeName}</p>
                   <div className="mt-3">
                     <span
@@ -129,18 +118,18 @@ export function DrugFormularyPage(): JSX.Element {
             );
           })}
 
-          {filtered.length === 0 && (
-          <p className="py-16 text-center text-sm text-muted">
-            ไม่พบยาที่ตรงกับการค้นหา
-          </p>
-          )}
+          {filtered.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted">
+              ไม่พบยาที่ตรงกับการค้นหา
+            </p>
+          ) : null}
         </div>
       </div>
 
       {filtered.length > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
           <p>
-            แสดง {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filtered.length)} จาก {filtered.length} รายการ
+            แสดง {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} จาก {filtered.length} รายการ
           </p>
           <div className="flex items-center gap-2">
             <button
