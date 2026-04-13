@@ -38,6 +38,29 @@ function getDrugKey(drug: Pick<Drug, 'genericName' | 'strength' | 'dosageForm'>)
   return `${drug.genericName}|${drug.strength}|${drug.dosageForm}`.toLowerCase();
 }
 
+function getTimestampValue(value: unknown): number {
+  if (!value) return 0;
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+  if (typeof value === 'object' && value !== null) {
+    if ('toDate' in value && typeof (value as { toDate?: () => Date }).toDate === 'function') {
+      return (value as { toDate: () => Date }).toDate().getTime();
+    }
+    if ('seconds' in value && typeof (value as { seconds?: number }).seconds === 'number') {
+      return (value as { seconds: number }).seconds * 1000;
+    }
+  }
+  return 0;
+}
+
+function pickNewerDrug(current: Drug, incoming: Drug): Drug {
+  const currentUpdated = Math.max(getTimestampValue(current.updatedAt), getTimestampValue(current.createdAt));
+  const incomingUpdated = Math.max(getTimestampValue(incoming.updatedAt), getTimestampValue(incoming.createdAt));
+  return incomingUpdated >= currentUpdated ? incoming : current;
+}
+
 function sortDrugs(drugs: Drug[]): Drug[] {
   return [...drugs].sort((a, b) => a.genericName.localeCompare(b.genericName));
 }
@@ -50,16 +73,23 @@ function normalizeDrug(drug: Drug): Drug {
 }
 
 function mergeDrugSources(primary: Drug[], secondary: Drug[]): Drug[] {
-  const seen = new Set(primary.map(getDrugKey));
-  const merged = [...primary];
+  const merged = new Map<string, Drug>();
+
+  for (const drug of primary) {
+    merged.set(getDrugKey(drug), drug);
+  }
+
   for (const drug of secondary) {
     const key = getDrugKey(drug);
-    if (!seen.has(key)) {
-      merged.push(drug);
-      seen.add(key);
+    const existing = merged.get(key);
+    if (!existing) {
+      merged.set(key, drug);
+      continue;
     }
+    merged.set(key, pickNewerDrug(existing, drug));
   }
-  return sortDrugs(merged);
+
+  return sortDrugs([...merged.values()]);
 }
 
 function canUseLocalStorage(): boolean {
