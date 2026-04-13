@@ -17,6 +17,7 @@ export type RouteOfAdmin =
   | 'IV'
   | 'IM'
   | 'SC'
+  | 'ID'
   | 'topical'
   | 'inhalation'
   | 'sublingual'
@@ -71,6 +72,7 @@ export interface Drug {
   pricePerUnit: number;
   status: DrugStatus;
   notes: string;
+  dosingInfo?: string;
   injectionInfo?: InjectionInfo;
   imageUrl?: string;
   createdAt: string;

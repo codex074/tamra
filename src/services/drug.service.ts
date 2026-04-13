@@ -11,6 +11,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { normalizeDrugStatus } from '@/lib/drug-status';
 import { mockDrugs } from '@/lib/mock-data';
 import type { Drug, DrugStatus } from '@/types';
 
@@ -41,6 +42,13 @@ function sortDrugs(drugs: Drug[]): Drug[] {
   return [...drugs].sort((a, b) => a.genericName.localeCompare(b.genericName));
 }
 
+function normalizeDrug(drug: Drug): Drug {
+  return {
+    ...drug,
+    status: normalizeDrugStatus(drug.status) as DrugStatus,
+  };
+}
+
 function mergeDrugSources(primary: Drug[], secondary: Drug[]): Drug[] {
   const seen = new Set(primary.map(getDrugKey));
   const merged = [...primary];
@@ -62,7 +70,7 @@ function readLocalDrugs(): Drug[] {
   if (!canUseLocalStorage()) return [];
   try {
     const raw = window.localStorage.getItem(LOCAL_DRUGS_KEY);
-    return raw ? (JSON.parse(raw) as Drug[]) : [];
+    return raw ? (JSON.parse(raw) as Drug[]).map(normalizeDrug) : [];
   } catch {
     return [];
   }
@@ -122,8 +130,8 @@ let fallbackDrugsPromise: Promise<Drug[]> | null = null;
 
 async function loadFallbackDrugs(): Promise<Drug[]> {
   fallbackDrugsPromise ??= import('@/lib/imported-drugs')
-    .then(({ importedDrugs }) => mergeDrugSources(importedDrugs, mockDrugs))
-    .catch(() => mockDrugs);
+    .then(({ importedDrugs }) => mergeDrugSources(importedDrugs.map(normalizeDrug), mockDrugs.map(normalizeDrug)))
+    .catch(() => mockDrugs.map(normalizeDrug));
   return applyLocalOverrides(await fallbackDrugsPromise);
 }
 
@@ -142,7 +150,7 @@ function buildLocalDrug(data: Omit<Drug, 'id' | 'createdAt' | 'updatedAt'>, id?:
     id: id ?? `local-${crypto.randomUUID()}`,
     createdAt: timestamp,
     updatedAt: timestamp,
-  };
+  } as Drug;
 }
 
 export const drugService = {
@@ -156,7 +164,7 @@ export const drugService = {
         q = query(q, where('therapeuticClass', '==', filters.therapeuticClass));
       }
       const snap = await getDocs(q);
-      const firestoreDrugs = applyLocalOverrides(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Drug));
+      const firestoreDrugs = applyLocalOverrides(snap.docs.map((d) => normalizeDrug({ id: d.id, ...d.data() } as Drug)));
       return firestoreDrugs.length ? filterDrugs(firestoreDrugs, filters) : filterDrugs(await loadFallbackDrugs(), filters);
     } catch {
       return filterDrugs(await loadFallbackDrugs(), filters);

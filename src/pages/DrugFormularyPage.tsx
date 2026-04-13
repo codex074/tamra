@@ -1,11 +1,10 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { DrugDetailModal } from '@/components/drug/DrugDetailModal';
 import { DrugSearchBar } from '@/components/drug/DrugSearchBar';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
-import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import type { Drug } from '@/types';
 
 export function DrugFormularyPage(): JSX.Element {
@@ -70,59 +69,41 @@ export function DrugFormularyPage(): JSX.Element {
       </div>
 
       <div className="overflow-hidden rounded-[24px] border border-line bg-white">
-        <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto] gap-4 bg-subtle px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-muted md:grid">
-          <p>Drug</p>
-          <p>Details</p>
-          <p className="text-right">View</p>
+        <div className="flex items-center justify-between border-b border-line bg-subtle px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+          <p>ชื่อยา (Drug Name)</p>
+          <p>รายละเอียด</p>
         </div>
 
         <div className="divide-y divide-line">
           {paginatedDrugs.map((drug) => {
-            const statusColor = getStatusColor(drug.status);
+            const label = [
+              drug.genericName,
+              drug.strength,
+              drug.dosageForm !== 'other' ? drug.dosageForm : null,
+              drug.tradeName ? `(${drug.tradeName})` : null,
+            ].filter(Boolean).join(' ');
+
             return (
               <button
-                className="grid w-full gap-4 px-5 py-4 text-left transition hover:bg-subtle/60 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto] md:items-center"
+                className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition hover:bg-subtle/60"
                 key={drug.id}
                 onClick={() => setSelectedDrug(drug)}
                 type="button"
               >
-                <div className="flex min-w-0 items-start gap-3">
+                {/* Thumbnail */}
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-line bg-subtle">
                   {drug.imageUrl ? (
-                    <img
-                      alt={drug.genericName}
-                      className="h-14 w-14 shrink-0 rounded-[10px] border border-line object-contain p-1"
-                      src={drug.imageUrl}
-                    />
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
-                  <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
-                  {drug.genericNameTH ? (
-                    <p className="mt-0.5 text-sm text-muted">{drug.genericNameTH}</p>
-                  ) : null}
-                  <p className="mt-1 truncate text-sm text-muted">{drug.tradeName}</p>
-                  <div className="mt-3">
-                    <span
-                      className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium"
-                      style={{ color: statusColor, backgroundColor: `${statusColor}18` }}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
-                      {getStatusLabel(drug.status)}
-                    </span>
-                  </div>
-                  </div>
+                    <img alt={drug.genericName} className="h-full w-full object-contain p-1" src={drug.imageUrl} />
+                  ) : (
+                    <span className="text-[10px] font-bold text-muted/40 uppercase">{drug.dosageForm.slice(0, 3)}</span>
+                  )}
                 </div>
 
-                <div className="min-w-0 space-y-1 text-sm text-muted">
-                  <p>{drug.strength} · {drug.route.join(', ')}</p>
-                  <p className="line-clamp-2">{drug.indication || 'ไม่มีรายละเอียดข้อบ่งใช้'}</p>
-                </div>
+                {/* Name */}
+                <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{label}</p>
 
-                <div className="md:text-right">
-                  <span className="inline-flex rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted">
-                    ดูรายละเอียด
-                  </span>
-                </div>
+                {/* Arrow */}
+                <ChevronRightIcon className="shrink-0 text-primary" size={20} strokeWidth={1.5} />
               </button>
             );
           })}

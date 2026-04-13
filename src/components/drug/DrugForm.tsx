@@ -4,11 +4,12 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { DrugImageUpload } from '@/components/drug/DrugImageUpload';
 import { useAuth } from '@/hooks/useAuth';
-import { DRUG_STATUS_CONFIG } from '@/lib/drug-status';
+import { getRouteLabel } from '@/lib/route-label';
+import { DRUG_STATUS_CONFIG, normalizeDrugStatus } from '@/lib/drug-status';
 import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
 import { deleteDrugImage, uploadDrugImage } from '@/services/storage.service';
 import { drugService } from '@/services/drug.service';
-import type { DosageForm, Drug, DrugStatus, PregnancyCategory, RouteOfAdmin } from '@/types';
+import type { DosageForm, Drug, PregnancyCategory, RouteOfAdmin } from '@/types';
 
 const drugSchema = z.object({
   genericName: z.string().min(1, 'กรุณาระบุชื่อสามัญยา'),
@@ -24,8 +25,9 @@ const drugSchema = z.object({
   pregnancyCategory: z.enum(['A', 'B', 'C', 'D', 'X', 'N/A']),
   g6pdSafe: z.boolean(),
   storage: z.string(),
-  status: z.enum(['had', 'uc_free', 'staff_order', 'ned_national', 'all_rights', 'ocpa', 'ned_only', 'restrict_atb', 'self_pay', 'self_pay2']),
+  status: z.enum(['had', 'uc_free', 'staff_order', 'ned_national', 'all_rights', 'ocpa', 'ned_only', 'restrict_atb', 'self_pay']),
   notes: z.string(),
+  dosingInfo: z.string().optional(),
   reconstitutionForm: z.string().optional(),
   reconstitutionVolume: z.string().optional(),
   compatibleSolutions: z.string().optional(),
@@ -43,9 +45,10 @@ interface DrugFormProps {
   initialDrug?: Drug | null;
   onCancelEdit?: () => void;
   onSuccess?: () => void | Promise<void>;
+  showHeaderCancelButton?: boolean;
 }
 
-const ROUTES: RouteOfAdmin[] = ['oral', 'IV', 'IM', 'SC', 'topical', 'inhalation', 'sublingual', 'rectal', 'ophthalmic', 'other'];
+const ROUTES: RouteOfAdmin[] = ['oral', 'IV', 'IM', 'SC', 'ID', 'topical', 'inhalation', 'sublingual', 'rectal', 'ophthalmic', 'other'];
 
 function getDefaultValues(drug?: Drug | null): DrugFormValues {
   return {
@@ -62,8 +65,9 @@ function getDefaultValues(drug?: Drug | null): DrugFormValues {
     pregnancyCategory: drug?.pregnancyCategory ?? 'N/A',
     g6pdSafe: drug?.g6pdSafe ?? true,
     storage: drug?.storage ?? 'เก็บที่อุณหภูมิห้อง',
-    status: drug?.status ?? 'all_rights',
+    status: normalizeDrugStatus(drug?.status ?? 'all_rights') as DrugFormValues['status'],
     notes: drug?.notes ?? '',
+    dosingInfo: drug?.dosingInfo ?? '',
     reconstitutionForm: drug?.injectionInfo?.reconstitutionForm ?? '',
     reconstitutionVolume: drug?.injectionInfo?.reconstitutionVolume ?? '',
     compatibleSolutions: drug?.injectionInfo?.compatibleSolutions ?? '',
@@ -76,12 +80,19 @@ function getDefaultValues(drug?: Drug | null): DrugFormValues {
   };
 }
 
-export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFormProps): JSX.Element {
+export function DrugForm({
+  initialDrug = null,
+  onCancelEdit,
+  onSuccess,
+  showHeaderCancelButton = true,
+}: DrugFormProps): JSX.Element {
   const { user } = useAuth();
   const isEditing = Boolean(initialDrug);
 
   const [selectedRoutes, setSelectedRoutes] = useState<RouteOfAdmin[]>(initialDrug?.route ?? ['oral']);
-  const [selectedStatus, setSelectedStatus] = useState<DrugStatus>(initialDrug?.status ?? 'all_rights');
+  const [selectedStatus, setSelectedStatus] = useState<DrugFormValues['status']>(
+    normalizeDrugStatus(initialDrug?.status ?? 'all_rights') as DrugFormValues['status'],
+  );
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [imageMarkedForDeletion, setImageMarkedForDeletion] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -103,7 +114,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
   useEffect(() => {
     reset(getDefaultValues(initialDrug));
     setSelectedRoutes(initialDrug?.route ?? ['oral']);
-    setSelectedStatus(initialDrug?.status ?? 'all_rights');
+    setSelectedStatus(normalizeDrugStatus(initialDrug?.status ?? 'all_rights') as DrugFormValues['status']);
     setPendingImageFile(null);
     setImageMarkedForDeletion(false);
     setSaveError(null);
@@ -187,6 +198,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
       route: selectedRoutes,
       updatedBy: user?.uid ?? 'unknown',
       imageUrl,
+      dosingInfo: values.dosingInfo || undefined,
       injectionInfo: values.dosageForm === 'injection'
         ? {
             reconstitutionForm: values.reconstitutionForm,
@@ -234,7 +246,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
             {isEditing ? 'แก้ไขข้อมูลยา' : 'เพิ่มยาใหม่'}
           </h3>
         </div>
-        {isEditing ? (
+        {isEditing && showHeaderCancelButton ? (
           <button
             className="rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink"
             onClick={() => { clearForm(); onCancelEdit?.(); }}
@@ -310,7 +322,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
             <button
               key={key}
               type="button"
-              onClick={() => setSelectedStatus(key as DrugStatus)}
+              onClick={() => setSelectedStatus(key as DrugFormValues['status'])}
               className="flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium transition"
               style={
                 selectedStatus === key
@@ -338,7 +350,7 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
               onClick={() => toggleRoute(route)}
               type="button"
             >
-              {route}
+              {getRouteLabel(route)}
             </button>
           ))}
         </div>
@@ -363,6 +375,16 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">ปฏิกิริยายา (Interactions)</label>
         <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ยาที่มีปฏิกิริยา" {...register('interactions')} />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium text-muted">ข้อมูลการใช้ยา (Dosing Information)</label>
+        <textarea
+          className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm"
+          placeholder="ขนาดยา วิธีใช้ ข้อควรระวัง ฯลฯ"
+          rows={4}
+          {...register('dosingInfo')}
+        />
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

@@ -13,15 +13,18 @@ export const DRUG_STATUS_CONFIG: Record<string, StatusConfig> = {
   ned_only:     { label: 'NED เฉพาะเบิกได้ (ไม่จ่ายฟรี)',                     color: '#FF0000' },
   restrict_atb: { label: 'Restrict drugs (ATB)',                                color: '#FF00FF' },
   self_pay:     { label: 'ชำระเงินเองทุกสิทธิ',                               color: '#FF8000' },
-  self_pay2:    { label: 'ชำระเงินเองทุกสิทธิ (2)',                            color: '#FF8040' },
 };
 
 export type DrugStatusKey = keyof typeof DRUG_STATUS_CONFIG;
 
+export function normalizeDrugStatus(status: string): string {
+  return status === 'self_pay2' ? 'self_pay' : status;
+}
+
 export function getStatusColor(status: string): string {
-  return DRUG_STATUS_CONFIG[status]?.color ?? '#5D6C7B';
+  return DRUG_STATUS_CONFIG[normalizeDrugStatus(status)]?.color ?? '#5D6C7B';
 }
 
 export function getStatusLabel(status: string): string {
-  return DRUG_STATUS_CONFIG[status]?.label ?? status;
+  return DRUG_STATUS_CONFIG[normalizeDrugStatus(status)]?.label ?? status;
 }

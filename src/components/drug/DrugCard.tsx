@@ -1,4 +1,5 @@
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
+import { formatRouteList } from '@/lib/route-label';
 import type { Drug } from '@/types';
 
 interface DrugCardProps {
@@ -37,7 +38,7 @@ export function DrugCard({ drug, onSelect }: DrugCardProps): JSX.Element {
 
       {/* Details */}
       <div className="mt-4 space-y-1 text-sm text-muted">
-        <p>{drug.strength} · {drug.route.join(', ')}</p>
+        <p>{drug.strength} · {formatRouteList(drug.route)}</p>
         <p className="line-clamp-2 leading-relaxed">{drug.indication}</p>
       </div>
     </button>

@@ -1,7 +1,7 @@
 import { X } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
-import { useDoseRules } from '@/hooks/useDoseRules';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
+import { formatRouteList } from '@/lib/route-label';
 import type { Drug } from '@/types';
 
 interface DrugDetailModalProps {
@@ -10,7 +10,6 @@ interface DrugDetailModalProps {
 }
 
 export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.Element {
-  const { rules } = useDoseRules(drug.id);
   const statusColor = getStatusColor(drug.status);
 
   return (
@@ -67,7 +66,7 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
                   <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Clinical</h3>
                   <dl className="mt-3 space-y-2.5 text-sm">
                     <div><dt className="font-semibold text-ink">Strength</dt><dd className="mt-0.5 text-muted">{drug.strength}</dd></div>
-                    <div><dt className="font-semibold text-ink">Route</dt><dd className="mt-0.5 text-muted">{drug.route.join(', ')}</dd></div>
+                    <div><dt className="font-semibold text-ink">Route</dt><dd className="mt-0.5 text-muted">{formatRouteList(drug.route)}</dd></div>
                     <div><dt className="font-semibold text-ink">Indication</dt><dd className="mt-0.5 text-muted">{drug.indication}</dd></div>
                     <div><dt className="font-semibold text-ink">Contraindication</dt><dd className="mt-0.5 text-muted">{drug.contraindication}</dd></div>
                     <div><dt className="font-semibold text-ink">Interactions</dt><dd className="mt-0.5 text-muted">{drug.interactions}</dd></div>
@@ -88,6 +87,14 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
                   </dl>
                 </article>
               </div>
+
+              {/* Dosing information */}
+              {drug.dosingInfo ? (
+                <article className="mt-4 rounded-[16px] border border-line p-4">
+                  <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการใช้ยา</h3>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted">{drug.dosingInfo}</p>
+                </article>
+              ) : null}
 
               {/* Injection info */}
               {drug.dosageForm === 'injection' && drug.injectionInfo && (
@@ -124,31 +131,6 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
                   )}
                 </article>
               )}
-
-              {/* Dose rules */}
-              <article className="mt-4">
-                <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-muted">Dose Rules</h3>
-                <div className="mt-3 grid gap-2">
-                  {rules.length ? (
-                    rules.map((rule) => (
-                      <div className="rounded-[16px] border border-line bg-white p-4" key={rule.id}>
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold text-ink">{rule.ruleName}</p>
-                          <span className="rounded-pill bg-primary-light px-2.5 py-0.5 text-[11px] font-medium text-primary">
-                            {rule.population}
-                          </span>
-                        </div>
-                        <p className="mt-1.5 text-sm text-muted">
-                          {rule.ruleType} · {rule.doseValue ?? rule.dosePerKg ?? rule.dosePerM2}{' '}
-                          {rule.doseUnit} · {rule.frequency}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted">ยังไม่มี dose rule สำหรับรายการนี้</p>
-                  )}
-                </div>
-              </article>
             </div>
           </div>
         </div>
