@@ -42,7 +42,7 @@ export default {
         ring: '0 0 0 1px #DEE3E9',
       },
       fontFamily: {
-        sans: ['Sarabun', 'Arial', 'sans-serif'],
+        sans: ['Sarabun', 'TH Sarabun New', 'THSarabunNew', 'Arial', 'sans-serif'],
         mono: ['"Geist Mono"', 'ui-monospace', 'monospace'],
       },
       borderRadius: {

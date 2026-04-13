@@ -5,9 +5,10 @@
 @tailwind utilities;
 
 :root {
+  --font-th-sarabun: 'Sarabun', 'TH Sarabun New', 'THSarabunNew', Arial, sans-serif;
   color: #1C2B33;
   background: #F1F4F7;
-  font-family: 'Sarabun', Arial, sans-serif;
+  font-family: var(--font-th-sarabun);
   font-feature-settings: 'liga' 1;
   text-rendering: optimizeLegibility;
 }
@@ -16,18 +17,23 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
   min-width: 320px;
   background: #F1F4F7;
+  font-family: var(--font-th-sarabun);
 }
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
+  font-family: inherit;
 }
 
 #root {
   min-height: 100vh;
+  font-family: var(--font-th-sarabun);
 }

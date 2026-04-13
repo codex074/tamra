@@ -35,8 +35,8 @@ export function LoginPage(): JSX.Element {
       </button>
 
       <section className="w-full max-w-sm rounded-[24px] bg-white p-8 shadow-card">
-          <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-primary">Secure Access</p>
-          <h2 className="mt-3 text-3xl font-semibold leading-tight tracking-tight text-ink">Sign in</h2>
+          <p className="text-[11px] uppercase tracking-[0.16em] text-primary">Secure Access</p>
+          <h2 className="mt-3 text-3xl font-medium leading-tight tracking-normal text-ink">Sign in</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             การล็อกอินใช้สำหรับจัดการข้อมูลเท่านั้น — หน้าค้นหายาเปิดสาธารณะโดยไม่ต้องล็อกอิน
           </p>

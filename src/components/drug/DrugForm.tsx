@@ -1,11 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { drugService } from '@/services/drug.service';
 import { useAuth } from '@/hooks/useAuth';
 import { DRUG_STATUS_CONFIG } from '@/lib/drug-status';
-import type { DosageForm, DrugStatus, RouteOfAdmin, PregnancyCategory } from '@/types';
+import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
+import { drugService } from '@/services/drug.service';
+import type { DosageForm, Drug, DrugStatus, PregnancyCategory, RouteOfAdmin } from '@/types';
 
 const drugSchema = z.object({
   genericName: z.string().min(1, 'กรุณาระบุชื่อสามัญยา'),
@@ -24,7 +25,6 @@ const drugSchema = z.object({
   pricePerUnit: z.number().min(0).optional(),
   status: z.enum(['had', 'uc_free', 'staff_order', 'ned_national', 'all_rights', 'ocpa', 'ned_only', 'restrict_atb', 'self_pay', 'self_pay2']),
   notes: z.string(),
-  // Injection-specific
   reconstitutionForm: z.string().optional(),
   reconstitutionVolume: z.string().optional(),
   compatibleSolutions: z.string().optional(),
@@ -38,12 +38,49 @@ const drugSchema = z.object({
 
 type DrugFormValues = z.infer<typeof drugSchema>;
 
+interface DrugFormProps {
+  initialDrug?: Drug | null;
+  onCancelEdit?: () => void;
+  onSuccess?: () => void | Promise<void>;
+}
+
 const ROUTES: RouteOfAdmin[] = ['oral', 'IV', 'IM', 'SC', 'topical', 'inhalation', 'sublingual', 'rectal', 'ophthalmic', 'other'];
 
-export function DrugForm(): JSX.Element {
+function getDefaultValues(drug?: Drug | null): DrugFormValues {
+  return {
+    genericName: drug?.genericName ?? '',
+    genericNameTH: drug?.genericNameTH ?? '',
+    tradeName: drug?.tradeName ?? '',
+    dosageForm: drug?.dosageForm ?? 'tablet',
+    strength: drug?.strength ?? '',
+    therapeuticClass: drug?.therapeuticClass ?? '',
+    indication: drug?.indication ?? '',
+    contraindication: drug?.contraindication ?? '',
+    sideEffects: drug?.sideEffects ?? '',
+    interactions: drug?.interactions ?? '',
+    pregnancyCategory: drug?.pregnancyCategory ?? 'N/A',
+    g6pdSafe: drug?.g6pdSafe ?? true,
+    storage: drug?.storage ?? 'เก็บที่อุณหภูมิห้อง',
+    pricePerUnit: drug?.pricePerUnit ?? 0,
+    status: drug?.status ?? 'all_rights',
+    notes: drug?.notes ?? '',
+    reconstitutionForm: drug?.injectionInfo?.reconstitutionForm ?? '',
+    reconstitutionVolume: drug?.injectionInfo?.reconstitutionVolume ?? '',
+    compatibleSolutions: drug?.injectionInfo?.compatibleSolutions ?? '',
+    dilutionVolume: drug?.injectionInfo?.dilutionVolume ?? '',
+    stability2_8C: drug?.injectionInfo?.stability2_8C ?? '',
+    stabilityRoom: drug?.injectionInfo?.stabilityRoom ?? '',
+    stability2_8CAfterMix: drug?.injectionInfo?.stability2_8CAfterMix ?? '',
+    stabilityRoomAfterMix: drug?.injectionInfo?.stabilityRoomAfterMix ?? '',
+    injectionReference: drug?.injectionInfo?.injectionReference ?? '',
+  };
+}
+
+export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFormProps): JSX.Element {
   const { user } = useAuth();
-  const [selectedRoutes, setSelectedRoutes] = useState<RouteOfAdmin[]>(['oral']);
-  const [selectedStatus, setSelectedStatus] = useState<DrugStatus>('all_rights');
+  const isEditing = Boolean(initialDrug);
+  const [selectedRoutes, setSelectedRoutes] = useState<RouteOfAdmin[]>(initialDrug?.route ?? ['oral']);
+  const [selectedStatus, setSelectedStatus] = useState<DrugStatus>(initialDrug?.status ?? 'all_rights');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -56,25 +93,16 @@ export function DrugForm(): JSX.Element {
     formState: { errors },
   } = useForm<DrugFormValues>({
     resolver: zodResolver(drugSchema),
-    defaultValues: {
-      genericName: '',
-      genericNameTH: '',
-      tradeName: '',
-      dosageForm: 'tablet',
-      strength: '',
-      therapeuticClass: '',
-      indication: '',
-      contraindication: '',
-      sideEffects: '',
-      interactions: '',
-      pregnancyCategory: 'N/A',
-      g6pdSafe: true,
-      storage: 'เก็บที่อุณหภูมิห้อง',
-      pricePerUnit: 0,
-      status: 'all_rights',
-      notes: '',
-    },
+    defaultValues: getDefaultValues(initialDrug),
   });
+
+  useEffect(() => {
+    reset(getDefaultValues(initialDrug));
+    setSelectedRoutes(initialDrug?.route ?? ['oral']);
+    setSelectedStatus(initialDrug?.status ?? 'all_rights');
+    setSaveError(null);
+    setSaveSuccess(false);
+  }, [initialDrug, reset]);
 
   const dosageForm = watch('dosageForm');
 
@@ -84,55 +112,105 @@ export function DrugForm(): JSX.Element {
     );
   }
 
+  function clearForm(): void {
+    reset(getDefaultValues(null));
+    setSelectedRoutes(['oral']);
+    setSelectedStatus('all_rights');
+    setSaveError(null);
+    setSaveSuccess(false);
+  }
+
   async function onSubmit(values: DrugFormValues): Promise<void> {
     if (selectedRoutes.length === 0) {
       setSaveError('กรุณาเลือก Route อย่างน้อย 1 รายการ');
       return;
     }
+
+    const confirmed = await confirmAction({
+      title: isEditing ? 'ยืนยันการบันทึกการแก้ไข' : 'ยืนยันการเพิ่มรายการยา',
+      text: isEditing
+        ? 'ระบบจะอัปเดตข้อมูลยาตามค่าที่คุณแก้ไข'
+        : 'ระบบจะสร้างรายการยาใหม่จากข้อมูลที่กรอกไว้',
+      confirmButtonText: isEditing ? 'บันทึกการแก้ไข' : 'เพิ่มรายการยา',
+    });
+
+    if (!confirmed) return;
+
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
+
+    const payload = {
+      ...values,
+      dosageForm: values.dosageForm as DosageForm,
+      pregnancyCategory: values.pregnancyCategory as PregnancyCategory,
+      pricePerUnit: values.pricePerUnit ?? 0,
+      status: selectedStatus,
+      route: selectedRoutes,
+      updatedBy: user?.uid ?? 'unknown',
+      injectionInfo: values.dosageForm === 'injection'
+        ? {
+            reconstitutionForm: values.reconstitutionForm,
+            reconstitutionVolume: values.reconstitutionVolume,
+            compatibleSolutions: values.compatibleSolutions,
+            dilutionVolume: values.dilutionVolume,
+            stability2_8C: values.stability2_8C,
+            stabilityRoom: values.stabilityRoom,
+            stability2_8CAfterMix: values.stability2_8CAfterMix,
+            stabilityRoomAfterMix: values.stabilityRoomAfterMix,
+            injectionReference: values.injectionReference,
+          }
+        : undefined,
+    };
+
     try {
-      await drugService.create({
-        ...values,
-        dosageForm: values.dosageForm as DosageForm,
-        pregnancyCategory: values.pregnancyCategory as PregnancyCategory,
-        pricePerUnit: values.pricePerUnit ?? 0,
-        status: selectedStatus,
-        route: selectedRoutes,
-        updatedBy: user?.uid ?? 'unknown',
-        injectionInfo: values.dosageForm === 'injection' ? {
-          reconstitutionForm: values.reconstitutionForm,
-          reconstitutionVolume: values.reconstitutionVolume,
-          compatibleSolutions: values.compatibleSolutions,
-          dilutionVolume: values.dilutionVolume,
-          stability2_8C: values.stability2_8C,
-          stabilityRoom: values.stabilityRoom,
-          stability2_8CAfterMix: values.stability2_8CAfterMix,
-          stabilityRoomAfterMix: values.stabilityRoomAfterMix,
-          injectionReference: values.injectionReference,
-        } : undefined,
-      });
+      if (initialDrug) {
+        await drugService.update(initialDrug.id, payload);
+      } else {
+        await drugService.create(payload);
+      }
       setSaveSuccess(true);
-      reset();
-      setSelectedRoutes(['oral']);
-      setSelectedStatus('all_rights');
-      setTimeout(() => setSaveSuccess(false), 3000);
+      if (!initialDrug) {
+        clearForm();
+      }
+      await onSuccess?.();
+      await showSuccessAlert(
+        isEditing ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มรายการยาสำเร็จ',
+        isEditing ? 'ข้อมูลยาถูกอัปเดตเรียบร้อยแล้ว' : 'รายการยาใหม่ถูกบันทึกเรียบร้อยแล้ว',
+      );
+      window.setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ กรุณาลองใหม่');
+      const message = err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ กรุณาลองใหม่';
+      setSaveError(message);
+      await showErrorAlert('ทำรายการไม่สำเร็จ', message);
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <form className="grid gap-4 rounded-3xl bg-white p-5 shadow-card" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
-      <div>
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Admin Panel</p>
-        <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-ink">เพิ่มยาใหม่</h3>
+    <form className="grid gap-4 rounded-3xl bg-white p-5 shadow-card lg:p-6" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Admin Panel</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] text-ink">
+            {isEditing ? 'แก้ไขข้อมูลยา' : 'เพิ่มยาใหม่'}
+          </h3>
+        </div>
+        {isEditing ? (
+          <button
+            className="rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink"
+            onClick={() => {
+              clearForm();
+              onCancelEdit?.();
+            }}
+            type="button"
+          >
+            ยกเลิกการแก้ไข
+          </button>
+        ) : null}
       </div>
 
-      {/* Required fields */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs font-medium text-muted">ชื่อสามัญ (Generic name) *</label>
@@ -144,6 +222,7 @@ export function DrugForm(): JSX.Element {
           <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น พาราเซตามอล" {...register('genericNameTH')} />
         </div>
       </div>
+
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">ชื่อการค้า (Trade name)</label>
         <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น Tylenol" {...register('tradeName')} />
@@ -182,7 +261,6 @@ export function DrugForm(): JSX.Element {
         </div>
       </div>
 
-      {/* Status */}
       <div>
         <label className="mb-2 block text-xs font-medium text-muted">สถานะ</label>
         <div className="flex flex-wrap gap-2">
@@ -190,9 +268,7 @@ export function DrugForm(): JSX.Element {
             <button
               key={key}
               type="button"
-              onClick={() => {
-                setSelectedStatus(key as DrugStatus);
-              }}
+              onClick={() => setSelectedStatus(key as DrugStatus)}
               className="flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium transition"
               style={
                 selectedStatus === key
@@ -200,10 +276,7 @@ export function DrugForm(): JSX.Element {
                   : { borderColor: '#DEE3E9', color: cfg.color, backgroundColor: 'white' }
               }
             >
-              <span
-                className="inline-block h-2 w-2 rounded-full shrink-0"
-                style={{ backgroundColor: cfg.color }}
-              />
+              <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cfg.color }} />
               {cfg.label}
             </button>
           ))}
@@ -211,7 +284,6 @@ export function DrugForm(): JSX.Element {
         <input type="hidden" value={selectedStatus} {...register('status')} />
       </div>
 
-      {/* Route of admin */}
       <div>
         <label className="mb-2 block text-xs font-medium text-muted">วิธีบริหาร (Route) *</label>
         <div className="flex flex-wrap gap-2">
@@ -232,7 +304,6 @@ export function DrugForm(): JSX.Element {
         </div>
       </div>
 
-      {/* Clinical info */}
       <div>
         <label className="mb-1 block text-xs font-medium text-muted">ข้อบ่งใช้ (Indication)</label>
         <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ข้อบ่งใช้ของยา" rows={2} {...register('indication')} />
@@ -275,7 +346,6 @@ export function DrugForm(): JSX.Element {
         </div>
       </div>
 
-      {/* Injection-specific section */}
       {dosageForm === 'injection' && (
         <div className="grid gap-4 rounded-[16px] border border-line p-4">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการผสมยา (Reconstitution &amp; Solution)</p>
@@ -334,15 +404,32 @@ export function DrugForm(): JSX.Element {
       )}
 
       {saveError ? <p className="rounded-2xl bg-danger-light px-4 py-2.5 text-sm text-danger">{saveError}</p> : null}
-      {saveSuccess ? <p className="rounded-2xl bg-success-light px-4 py-2.5 text-sm text-success">บันทึกข้อมูลสำเร็จ</p> : null}
+      {saveSuccess ? (
+        <p className="rounded-2xl bg-success-light px-4 py-2.5 text-sm text-success">
+          {isEditing ? 'อัปเดตข้อมูลยาเรียบร้อย' : 'บันทึกข้อมูลสำเร็จ'}
+        </p>
+      ) : null}
 
-      <button
-        className="rounded-xl bg-ink px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
-        disabled={saving}
-        type="submit"
-      >
-        {saving ? 'กำลังบันทึก...' : 'บันทึกข้อมูลยา'}
-      </button>
+      <div className="flex flex-wrap gap-3">
+        <button
+          className="rounded-xl bg-ink px-4 py-3 text-sm font-medium text-white disabled:opacity-50"
+          disabled={saving}
+          type="submit"
+        >
+          {saving ? 'กำลังบันทึก...' : isEditing ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูลยา'}
+        </button>
+        {!isEditing ? (
+          <button
+            className="rounded-xl border border-line px-4 py-3 text-sm font-medium text-muted transition hover:border-ink hover:text-ink"
+            onClick={() => {
+              clearForm();
+            }}
+            type="button"
+          >
+            ล้างฟอร์ม
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }

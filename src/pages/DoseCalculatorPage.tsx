@@ -71,8 +71,8 @@ export function DoseCalculatorPage(): JSX.Element {
       <PatientParamsForm drugs={drugOptions} onSubmit={handleSubmit} />
       <div className="space-y-4">
         <section className="rounded-[32px] bg-white p-6 shadow-card">
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Dose Calculator</p>
-          <h1 className="mt-4 text-5xl font-semibold tracking-[-0.09em] text-ink">Patient-specific dosing with built-in safety signals.</h1>
+          <p className="text-xs uppercase tracking-[0.16em] text-primary">Dose Calculator</p>
+          <h1 className="mt-4 text-5xl font-medium leading-tight tracking-normal text-ink">Patient-specific dosing with built-in safety signals.</h1>
         </section>
         {currentDrug && result ? (
           <>

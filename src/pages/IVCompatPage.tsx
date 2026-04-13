@@ -20,8 +20,8 @@ export function IVCompatPage(): JSX.Element {
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] bg-white p-6 shadow-card">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">IV Compatibility</p>
-        <h1 className="mt-4 text-5xl font-semibold tracking-[-0.09em] text-ink">Check infusion compatibility before the line gets crowded.</h1>
+        <p className="text-xs uppercase tracking-[0.16em] text-primary">IV Compatibility</p>
+        <h1 className="mt-4 text-5xl font-medium leading-tight tracking-normal text-ink">Check infusion compatibility before the line gets crowded.</h1>
       </section>
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-4">

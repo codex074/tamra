@@ -1,4 +1,14 @@
+import { ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { DrugForm } from '@/components/drug/DrugForm';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ModalPortal } from '@/components/ui/ModalPortal';
+import { useDrugs } from '@/hooks/useDrugs';
+import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
+import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
+import { drugService } from '@/services/drug.service';
+import type { Drug } from '@/types';
 
 const auditRows = [
   { action: 'UPDATE', collection: 'drugs', by: 'demo@tamraya.app', time: '2026-04-12 21:10' },
@@ -7,22 +17,216 @@ const auditRows = [
 ];
 
 export function AdminPage(): JSX.Element {
+  const pageSize = 10;
+  const { drugs, loading, error, refetch } = useDrugs();
+  const [editingDrug, setEditingDrug] = useState<Drug | null>(null);
+  const [query, setQuery] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  const filteredDrugs = useMemo(
+    () =>
+      drugs.filter((drug) =>
+        [drug.genericName, drug.genericNameTH, drug.tradeName, drug.strength, drug.therapeuticClass]
+          .join(' ')
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+      ),
+    [drugs, query],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredDrugs.length / pageSize));
+  const paginatedDrugs = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredDrugs.slice(start, start + pageSize);
+  }, [filteredDrugs, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
+
+  async function refreshAdminData(): Promise<void> {
+    await refetch();
+  }
+
+  async function handleDelete(drug: Drug): Promise<void> {
+    const confirmed = await confirmAction({
+      title: `ยืนยันการลบ ${drug.genericName}`,
+      text: 'รายการยานี้จะถูกนำออกจากระบบ และจะไม่แสดงใน formulary อีกต่อไป',
+      confirmButtonText: 'ลบรายการ',
+      icon: 'warning',
+    });
+    if (!confirmed) return;
+
+    setDeleteError(null);
+    try {
+      await drugService.remove(drug.id);
+      if (editingDrug?.id === drug.id) {
+        setEditingDrug(null);
+      }
+      await refetch();
+      await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบรายการ ${drug.genericName} เรียบร้อยแล้ว`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'ลบข้อมูลไม่สำเร็จ';
+      setDeleteError(message);
+      await showErrorAlert('ลบข้อมูลไม่สำเร็จ', message);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] bg-white p-6 shadow-card lg:p-8">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Admin Panel</p>
-        <h1 className="mt-4 max-w-5xl text-4xl font-semibold tracking-[-0.09em] text-ink sm:text-5xl lg:text-6xl">
+        <p className="text-xs uppercase tracking-[0.16em] text-primary">Admin Panel</p>
+        <h1 className="mt-4 max-w-5xl text-4xl font-medium leading-tight tracking-normal text-ink sm:text-5xl lg:text-6xl">
           Manage formulary content and operational visibility.
         </h1>
       </section>
 
-      <DrugForm />
+      <DrugForm
+        onCancelEdit={() => setEditingDrug(null)}
+        onSuccess={refreshAdminData}
+      />
+
+      <section className="rounded-[32px] bg-white p-6 shadow-card lg:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Admin Tools</p>
+            <h2 className="mt-3 text-3xl font-medium leading-tight tracking-normal text-ink">Edit or remove formulary entries</h2>
+            <p className="mt-2 text-sm text-muted">
+              ค้นหารายการยา เลือกแก้ไขเพื่อโหลดข้อมูลขึ้นฟอร์ม หรือกดลบเพื่อนำรายการออกจากระบบ
+            </p>
+          </div>
+          <div className="w-full max-w-md">
+            <input
+              className="w-full rounded-2xl border border-line bg-subtle px-4 py-3 text-sm text-ink placeholder:text-muted"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="ค้นหาจากชื่อยา ชื่อการค้า ความแรง หรือกลุ่มยา"
+              value={query}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+          <p>
+            {filteredDrugs.length} จาก {drugs.length} รายการ
+          </p>
+          {filteredDrugs.length ? (
+            <p>
+              หน้า {page} / {totalPages}
+            </p>
+          ) : null}
+        </div>
+
+        {loading ? <div className="mt-6"><LoadingSpinner /></div> : null}
+        {error ? <div className="mt-6"><ErrorAlert message={error} onRetry={() => void refetch()} /></div> : null}
+        {deleteError ? <p className="mt-4 rounded-2xl bg-danger-light px-4 py-3 text-sm text-danger">{deleteError}</p> : null}
+
+        {!loading && !error ? (
+          <div className="mt-6">
+            <div className="overflow-hidden rounded-[24px] border border-line">
+              <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto] gap-4 bg-subtle px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-muted md:grid">
+                <p>Drug</p>
+                <p>Details</p>
+                <p className="text-right">Actions</p>
+              </div>
+              <div className="divide-y divide-line bg-white">
+                {paginatedDrugs.map((drug) => {
+              const statusColor = getStatusColor(drug.status);
+              return (
+                <article className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1.2fr)_auto] md:items-center" key={drug.id}>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
+                    <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
+                    <p className="mt-1 truncate text-sm text-muted">{drug.tradeName}</p>
+                    <div className="mt-3">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-pill px-2.5 py-1 text-[11px] font-medium"
+                        style={{ color: statusColor, backgroundColor: `${statusColor}18` }}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: statusColor }} />
+                        {getStatusLabel(drug.status)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 space-y-1 text-sm text-muted">
+                    <p>{drug.strength} · {drug.route.join(', ')}</p>
+                    <p className="line-clamp-2">{drug.indication || 'ไม่มีรายละเอียดข้อบ่งใช้'}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 md:justify-end">
+                    <button
+                      className="inline-flex items-center gap-2 rounded-pill bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-hover"
+                      onClick={() => {
+                        setEditingDrug(drug);
+                      }}
+                      type="button"
+                    >
+                      <Pencil size={14} />
+                      แก้ไข
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-2 rounded-pill border border-danger/20 bg-white px-4 py-2 text-sm font-medium text-danger transition hover:border-danger hover:bg-danger-light"
+                      onClick={() => void handleDelete(drug)}
+                      type="button"
+                    >
+                      <Trash2 size={14} />
+                      ลบ
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+
+            {filteredDrugs.length === 0 ? (
+              <p className="px-6 py-12 text-center text-sm text-muted">
+                ไม่พบรายการยาที่ตรงกับคำค้น
+              </p>
+            ) : null}
+              </div>
+            </div>
+
+            {filteredDrugs.length > 0 ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-muted">
+                  แสดง {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, filteredDrugs.length)} จาก {filteredDrugs.length} รายการ
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink disabled:opacity-50"
+                    disabled={page === 1}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    type="button"
+                  >
+                    <ChevronLeft size={14} />
+                    ก่อนหน้า
+                  </button>
+                  <button
+                    className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink disabled:opacity-50"
+                    disabled={page === totalPages}
+                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                    type="button"
+                  >
+                    ถัดไป
+                    <ChevronRight size={14} />
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </section>
 
       <section className="rounded-[32px] bg-white p-6 shadow-card">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">Audit Log</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.06em] text-ink">Latest activity</h2>
+            <p className="text-xs uppercase tracking-[0.16em] text-primary">Audit Log</p>
+            <h2 className="mt-3 text-3xl font-medium leading-tight tracking-normal text-ink">Latest activity</h2>
           </div>
           <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-medium text-primary">Admin only</span>
         </div>
@@ -49,6 +253,32 @@ export function AdminPage(): JSX.Element {
           </table>
         </div>
       </section>
+
+      {editingDrug ? (
+        <ModalPortal>
+          <div
+            className="fixed inset-0 z-[999] overflow-y-auto p-4 pt-10 md:p-6 md:pt-12"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                setEditingDrug(null);
+              }
+            }}
+          >
+            <div className="relative flex min-h-dvh w-full justify-center">
+              <div className="w-full max-w-5xl">
+                <DrugForm
+                  initialDrug={editingDrug}
+                  onCancelEdit={() => setEditingDrug(null)}
+                  onSuccess={async () => {
+                    await refreshAdminData();
+                    setEditingDrug(null);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </ModalPortal>
+      ) : null}
     </div>
   );
 }
