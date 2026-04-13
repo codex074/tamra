@@ -4,6 +4,7 @@ import { DrugForm } from '@/components/drug/DrugForm';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { useAuth } from '@/hooks/useAuth';
 import { useDrugs } from '@/hooks/useDrugs';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
@@ -18,6 +19,7 @@ const auditRows = [
 
 export function AdminPage(): JSX.Element {
   const pageSize = 10;
+  const { user } = useAuth();
   const { drugs, loading, error, refetch } = useDrugs();
   const [editingDrug, setEditingDrug] = useState<Drug | null>(null);
   const [query, setQuery] = useState('');
@@ -55,6 +57,13 @@ export function AdminPage(): JSX.Element {
   }
 
   async function handleDelete(drug: Drug): Promise<void> {
+    if (user?.isDemo) {
+      const message = 'Guest mode ไม่สามารถลบข้อมูลจริงใน Firestore ได้ กรุณาเข้าสู่ระบบด้วยบัญชี Firebase ก่อน';
+      setDeleteError(message);
+      await showErrorAlert('ลบข้อมูลไม่ได้ใน Guest mode', message);
+      return;
+    }
+
     const confirmed = await confirmAction({
       title: `ยืนยันการลบ ${drug.genericName}`,
       text: 'รายการยานี้จะถูกนำออกจากระบบ และจะไม่แสดงใน formulary อีกต่อไป',
@@ -88,9 +97,16 @@ export function AdminPage(): JSX.Element {
       </section>
 
       <DrugForm
+        initialDrug={editingDrug}
         onCancelEdit={() => setEditingDrug(null)}
         onSuccess={refreshAdminData}
       />
+
+      {user?.isDemo ? (
+        <section className="rounded-[24px] border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900 shadow-card">
+          คุณกำลังใช้ Guest mode อยู่ จึงดูหน้า Admin ได้เพื่อเดโม UI เท่านั้น การเพิ่ม แก้ไข ลบข้อมูลยา และอัปโหลดรูปจะไม่ถูกบันทึกขึ้น Firebase
+        </section>
+      ) : null}
 
       <section className="rounded-[32px] bg-white p-6 shadow-card lg:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">

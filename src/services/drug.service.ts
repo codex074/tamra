@@ -18,6 +18,21 @@ const COL = 'drugs';
 const LOCAL_DRUGS_KEY = 'tamraya.localDrugs';
 const LOCAL_DELETED_IDS_KEY = 'tamraya.deletedDrugIds';
 
+function stripUndefinedDeep<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripUndefinedDeep(item)) as T;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, entryValue]) => entryValue !== undefined)
+      .map(([key, entryValue]) => [key, stripUndefinedDeep(entryValue)]);
+    return Object.fromEntries(entries) as T;
+  }
+
+  return value;
+}
+
 function getDrugKey(drug: Pick<Drug, 'genericName' | 'strength' | 'dosageForm'>): string {
   return `${drug.genericName}|${drug.strength}|${drug.dosageForm}`.toLowerCase();
 }
@@ -165,10 +180,13 @@ export const drugService = {
 
   async create(data: Omit<Drug, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     try {
-      const ref = await addDoc(collection(db, COL), {
+      const payload = stripUndefinedDeep({
         ...data,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      });
+      const ref = await addDoc(collection(db, COL), {
+        ...payload,
       });
       return ref.id;
     } catch {
@@ -195,10 +213,11 @@ export const drugService = {
     }
 
     try {
-      await updateDoc(doc(db, COL, id), {
+      const payload = stripUndefinedDeep({
         ...data,
         updatedAt: serverTimestamp(),
       });
+      await updateDoc(doc(db, COL, id), payload);
     } catch {
       upsertLocalDrug({
         ...existing,

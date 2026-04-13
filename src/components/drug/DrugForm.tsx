@@ -134,6 +134,13 @@ export function DrugForm({ initialDrug = null, onCancelEdit, onSuccess }: DrugFo
       return;
     }
 
+    if (user?.isDemo) {
+      const message = 'Guest mode ใช้ดูและทดลอง UI ได้เท่านั้น ยังไม่สามารถบันทึกข้อมูลหรืออัปโหลดรูปขึ้น Firebase ได้';
+      setSaveError(message);
+      await showErrorAlert('บันทึกข้อมูลไม่ได้ใน Guest mode', message);
+      return;
+    }
+
     const confirmed = await confirmAction({
       title: isEditing ? 'ยืนยันการบันทึกการแก้ไข' : 'ยืนยันการเพิ่มรายการยา',
       text: isEditing
