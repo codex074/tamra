@@ -1,0 +1,39 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "drugs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "therapeuticClass", "order": "ASCENDING" },
+        { "fieldPath": "genericName", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "doseRules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "drugId", "order": "ASCENDING" },
+        { "fieldPath": "population", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "ivCompatibility",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "drugAId", "order": "ASCENDING" },
+        { "fieldPath": "drugBId", "order": "ASCENDING" },
+        { "fieldPath": "solution", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "auditLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "collection", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

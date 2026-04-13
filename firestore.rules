@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Public formulary data — anyone can read, authenticated users can write
+    // (Admin panel already requires login in the UI via ProtectedRoute)
+    match /drugs/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /doseRules/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /ivCompatibility/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /appConfig/{docId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    // Audit logs — admin reads, authenticated writes
+    match /auditLogs/{docId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+
+    // Users — authenticated can read/write own doc; admin can read all
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}
