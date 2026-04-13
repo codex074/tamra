@@ -15,7 +15,6 @@ export function TopBar(): JSX.Element {
       </button>
       <div>
         <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-primary">Tam-Ra-Ya</p>
-        <p className="text-base font-semibold leading-tight text-ink">ตำรายา</p>
       </div>
     </header>
   );

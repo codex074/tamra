@@ -54,9 +54,6 @@ export function DrugFormularyPage(): JSX.Element {
       {/* Page heading */}
       <div>
         <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-primary">Drug Information</p>
-        <h1 className="mt-1.5 text-4xl font-semibold leading-tight tracking-tight text-ink">
-          ค้นหายาในบัญชียาโรงพยาบาล
-        </h1>
       </div>
 
       {/* Search box */}
