@@ -63,11 +63,17 @@ function SidebarContent({ onClose }: { onClose?: () => void }): JSX.Element {
       {/* User info + auth action at bottom */}
       <div className="mt-auto space-y-2 px-2">
         <div className="rounded-[14px] bg-subtle px-3 py-3">
-          <span className="inline-flex items-center rounded-pill bg-primary-light px-2.5 py-0.5 text-[11px] font-medium text-primary">
-            {user ? (user.isDemo ? 'Demo mode' : user.role) : 'Public access'}
-          </span>
+          {user?.isDemo ? (
+            <span className="inline-flex items-center rounded-pill bg-primary-light px-2.5 py-0.5 text-[11px] font-medium text-primary">
+              Demo mode
+            </span>
+          ) : null}
           {user?.email ? (
-            <p className="mt-1.5 truncate text-[11px] text-muted">{user.email}</p>
+            <p className={`truncate text-[11px] text-muted ${user.isDemo ? 'mt-1.5' : ''}`}>{user.email}</p>
+          ) : !user ? (
+            <span className="inline-flex items-center rounded-pill bg-primary-light px-2.5 py-0.5 text-[11px] font-medium text-primary">
+              Public access
+            </span>
           ) : null}
         </div>
 
