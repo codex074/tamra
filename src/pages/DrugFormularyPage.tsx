@@ -5,7 +5,7 @@ import { DrugSearchBar } from '@/components/drug/DrugSearchBar';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
-import { getStatusColor } from '@/lib/drug-status';
+import { getStatusColor, normalizeDrugStatus } from '@/lib/drug-status';
 import type { Drug } from '@/types';
 
 export function DrugFormularyPage(): JSX.Element {
@@ -111,8 +111,18 @@ export function DrugFormularyPage(): JSX.Element {
                   )}
                 </div>
 
-                {/* Name */}
-                <p className="min-w-0 flex-1 truncate text-sm font-medium" style={{ color: statusColor }}>{label}</p>
+                {/* Name + HAD badge */}
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  {normalizeDrugStatus(drug.status) === 'had' && (
+                    <span
+                      aria-label="High Alert Drug"
+                      className="inline-flex shrink-0 items-center rounded-full border border-red-300 bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700"
+                    >
+                      HAD
+                    </span>
+                  )}
+                  <p className="min-w-0 truncate text-sm font-medium" style={{ color: statusColor }}>{label}</p>
+                </div>
 
                 {/* Arrow */}
                 <ChevronRightIcon className="shrink-0 text-primary" size={20} strokeWidth={1.5} />

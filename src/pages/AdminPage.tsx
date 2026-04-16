@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Pencil, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { DrugForm } from '@/components/drug/DrugForm';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -119,56 +119,45 @@ export function AdminPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[32px] bg-white p-6 shadow-card lg:p-8">
-        <p className="text-xs uppercase tracking-[0.16em] text-primary">Admin Panel</p>
-        <h1 className="mt-4 max-w-5xl text-4xl font-medium leading-tight tracking-normal text-ink sm:text-5xl lg:text-6xl">
-          Manage formulary content and operational visibility.
-        </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-muted">
-          เลือกการทำงานที่ต้องการจาก 2 ปุ่มด้านล่าง เมื่อกดเพิ่มรายการยาจะเปิดฟอร์มแบบ modal และเมื่อกดแก้ไข/ลบรายการยาจะแสดงรายการยาให้จัดการต่อได้
-        </p>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <button
-            className="rounded-[28px] border border-primary/15 bg-primary-light px-6 py-6 text-left transition hover:border-primary/30 hover:bg-primary-light/80"
-            onClick={() => setIsCreateModalOpen(true)}
-            type="button"
-          >
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Action 01</p>
-            <h2 className="mt-3 text-2xl font-semibold text-ink">เพิ่มรายการยา</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              เปิดแบบฟอร์มเพิ่มรายการยาใหม่ใน modal โดยไม่ต้องแสดงฟอร์มค้างไว้บนหน้า
-            </p>
-          </button>
-
-          <button
-            className="rounded-[28px] border border-line bg-subtle px-6 py-6 text-left transition hover:border-ink/20 hover:bg-white"
-            onClick={() => setIsManageListOpen((current) => !current)}
-            type="button"
-          >
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Action 02</p>
-            <h2 className="mt-3 text-2xl font-semibold text-ink">แก้ไข/ลบรายการยา</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {isManageListOpen
-                ? 'ซ่อนรายการยาที่ใช้สำหรับแก้ไขหรือลบ'
-                : 'แสดงรายการยาเพื่อค้นหาและเลือกแก้ไขหรือลบ'}
-            </p>
-          </button>
+      <section className="rounded-[32px] bg-white p-5 shadow-card">
+        {/* Header row */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Admin Panel</p>
+            <h1 className="mt-1 text-2xl font-semibold text-ink">จัดการตำรายา</h1>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="inline-flex cursor-pointer items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-white transition hover:bg-primary-hover focus:outline-none focus:ring-4 focus:ring-primary/20"
+              onClick={() => setIsCreateModalOpen(true)}
+              type="button"
+            >
+              <Plus size={15} aria-hidden="true" />
+              เพิ่มรายการยา
+            </button>
+            <button
+              className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-line bg-subtle px-4 py-2.5 text-sm font-medium text-ink transition hover:bg-white hover:border-ink/30 focus:outline-none focus:ring-4 focus:ring-primary/20"
+              onClick={() => setIsManageListOpen((current) => !current)}
+              type="button"
+            >
+              <Pencil size={14} aria-hidden="true" />
+              {isManageListOpen ? 'ซ่อนรายการ' : 'แก้ไข / ลบ'}
+            </button>
+          </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[22px] border border-dashed border-line bg-subtle px-4 py-3">
-          <p className="text-sm text-muted">
-            ถ้า browser ยังจำข้อมูลเก่าจนรูปหรือรายการยาไม่อัปเดต สามารถล้าง local cache ของเครื่องนี้ได้จากปุ่มด้านขวา
-          </p>
+        {/* Cache hint */}
+        <div className="mt-4 flex items-center justify-between rounded-2xl bg-subtle px-4 py-2.5">
+          <p className="text-xs text-muted">Browser จำ cache เก่าอยู่?</p>
           <button
-            className="inline-flex items-center rounded-pill border border-line bg-white px-4 py-2 text-sm font-medium text-ink transition hover:border-ink hover:text-ink"
+            className="cursor-pointer text-xs font-medium text-muted underline-offset-2 transition hover:text-ink hover:underline"
             onClick={() => void handleCleanupLocalCache()}
             type="button"
           >
-            Cleanup local cache
+            ล้าง local cache
           </button>
         </div>
-        {cleanupMessage ? <p className="mt-3 text-sm text-success">{cleanupMessage}</p> : null}
+        {cleanupMessage ? <p className="mt-2 text-xs text-success">{cleanupMessage}</p> : null}
       </section>
 
       {user?.isDemo ? (
