@@ -4,6 +4,7 @@ import { DoseResultCard } from '@/components/dose/DoseResultCard';
 import { PatientParamsForm } from '@/components/dose/PatientParamsForm';
 import { SpecialPopulationAlert } from '@/components/dose/SpecialPopulationAlert';
 import { useDrugs } from '@/hooks/useDrugs';
+import { formatDrugDisplayName } from '@/lib/utils';
 import { doseRuleService } from '@/services/doseRule.service';
 import { calculateDose, inferPopulation } from '@/services/dose.calculator';
 import type { PatientFormValues } from '@/components/dose/PatientParamsForm';
@@ -17,7 +18,7 @@ export function DoseCalculatorPage(): JSX.Element {
   const [requireConfirm, setRequireConfirm] = useState(false);
   const [pendingPayload, setPendingPayload] = useState<{ rule: DoseRule; patient: PatientParams; drug: Drug } | null>(null);
 
-  const drugOptions = useMemo(() => drugs.map((drug) => ({ id: drug.id, genericName: drug.genericName })), [drugs]);
+  const drugOptions = useMemo(() => drugs.map((drug) => ({ id: drug.id, label: formatDrugDisplayName(drug) })), [drugs]);
 
   function commitCalculation(rule: DoseRule, patient: PatientParams, drug: Drug): void {
     setCurrentDrug(drug);
@@ -85,7 +86,7 @@ export function DoseCalculatorPage(): JSX.Element {
       </div>
       {requireConfirm && pendingPayload ? (
         <ConfirmDialog
-          description={`ยา ${pendingPayload.drug.genericName} อยู่ใน pregnancy category ${pendingPayload.drug.pregnancyCategory}`}
+          description={`ยา ${formatDrugDisplayName(pendingPayload.drug)} อยู่ใน pregnancy category ${pendingPayload.drug.pregnancyCategory}`}
           onCancel={() => {
             setRequireConfirm(false);
             setPendingPayload(null);

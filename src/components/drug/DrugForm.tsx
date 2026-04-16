@@ -12,10 +12,11 @@ import { drugService } from '@/services/drug.service';
 import type { DosageForm, Drug, PregnancyCategory, RouteOfAdmin } from '@/types';
 
 const drugSchema = z.object({
+  displayName: z.string().optional(),
   genericName: z.string().min(1, 'กรุณาระบุชื่อสามัญยา'),
   genericNameTH: z.string().optional(),
   tradeName: z.string(),
-  dosageForm: z.enum(['tablet', 'capsule', 'injection', 'solution', 'suspension', 'cream', 'ointment', 'patch', 'inhaler', 'suppository', 'drops', 'other']),
+  dosageForm: z.enum(['tablet', 'capsule', 'injection', 'solution', 'suspension', 'cream', 'ointment', 'patch', 'inhaler', 'suppository', 'eye_drops', 'ear_drops', 'drops', 'other']),
   strength: z.string().min(1, 'กรุณาระบุความแรง'),
   therapeuticClass: z.string().min(1, 'กรุณาระบุกลุ่มยา'),
   indication: z.string(),
@@ -52,6 +53,7 @@ const ROUTES: RouteOfAdmin[] = ['oral', 'IV', 'IM', 'SC', 'ID', 'topical', 'inha
 
 function getDefaultValues(drug?: Drug | null): DrugFormValues {
   return {
+    displayName: drug?.displayName ?? '',
     genericName: drug?.genericName ?? '',
     genericNameTH: drug?.genericNameTH ?? '',
     tradeName: drug?.tradeName ?? '',
@@ -191,6 +193,7 @@ export function DrugForm({
     // --- บันทึก Firestore ---
     const payload = {
       ...values,
+      displayName: values.displayName?.trim() || undefined,
       dosageForm: values.dosageForm as DosageForm,
       pregnancyCategory: values.pregnancyCategory as PregnancyCategory,
       pricePerUnit: 0,
@@ -269,11 +272,15 @@ export function DrugForm({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Display name</label>
+          <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น ACETIN" {...register('displayName')} />
+        </div>
+        <div>
           <label className="mb-1 block text-xs font-medium text-muted">ชื่อสามัญ (Generic name) *</label>
           <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น Paracetamol" {...register('genericName')} />
           {errors.genericName ? <p className="mt-1 text-xs text-danger">{errors.genericName.message}</p> : null}
         </div>
-        <div>
+        <div className="sm:col-span-2">
           <label className="mb-1 block text-xs font-medium text-muted">ชื่อภาษาไทย</label>
           <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น พาราเซตามอล" {...register('genericNameTH')} />
         </div>
@@ -310,6 +317,8 @@ export function DrugForm({
           <option value="patch">Patch</option>
           <option value="inhaler">Inhaler</option>
           <option value="suppository">Suppository</option>
+          <option value="eye_drops">Eye Drops</option>
+          <option value="ear_drops">Ear Drops</option>
           <option value="drops">Drops</option>
           <option value="other">Other</option>
         </select>

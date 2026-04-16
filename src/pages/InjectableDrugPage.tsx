@@ -1,10 +1,12 @@
-import { Search, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronRight as ChevronRightIcon, Search, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
 import { formatRouteList } from '@/lib/route-label';
-import { formatDateTime } from '@/lib/utils';
-import { auditService } from '@/services/audit.service';
+import { normalizeDrugStatus } from '@/lib/drug-status';
+import { formatDrugDisplayName, formatLatestDateTime } from '@/lib/utils';
 import type { Drug } from '@/types';
 
 /* ──────────────────────────────────────────────────────────────
@@ -42,13 +44,6 @@ function InjectableDetailModal({ drug, onClose }: DetailModalProps): JSX.Element
   const hasCompatibility =
     info?.solutionCompatibility || info?.additiveCompatibility || info?.syringeCompatibility || info?.ySiteCompatibility;
 
-  useEffect(() => {
-    void auditService.log('VIEW', 'drugs', drug.id, undefined, {
-      genericName: drug.genericName,
-      tradeName: drug.tradeName,
-    });
-  }, [drug.genericName, drug.id, drug.tradeName]);
-
   return (
     <ModalPortal>
       <div
@@ -73,7 +68,7 @@ function InjectableDetailModal({ drug, onClose }: DetailModalProps): JSX.Element
             {/* Header */}
             <div className="p-6 pb-4 pr-20">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Injectable Drug</p>
-              <h2 className="mt-1.5 text-2xl font-semibold leading-snug text-ink">{drug.genericName}</h2>
+              <h2 className="mt-1.5 text-2xl font-semibold leading-snug text-ink">{formatDrugDisplayName(drug)}</h2>
               {drug.genericNameTH && <p className="mt-0.5 text-base text-muted">{drug.genericNameTH}</p>}
               <p className="mt-1 text-sm text-muted">{drug.tradeName} · {drug.strength}</p>
             </div>
@@ -142,7 +137,9 @@ function InjectableDetailModal({ drug, onClose }: DetailModalProps): JSX.Element
               )}
 
               <div className="flex justify-end pt-2">
-                <p className="text-xs text-muted">อัปเดตล่าสุด {formatDateTime(drug.updatedAt)}</p>
+                <p className="text-xs text-muted">
+                  อัปเดตล่าสุด {formatLatestDateTime([drug.updatedAt, drug.createdAt])}
+                </p>
               </div>
             </div>
           </div>
@@ -156,21 +153,20 @@ function InjectableDetailModal({ drug, onClose }: DetailModalProps): JSX.Element
    Drug card
 ────────────────────────────────────────────────────────────── */
 
-function DrugCard({ drug, onClick }: { drug: Drug; onClick: () => void }): JSX.Element {
-  return (
-    <button
-      className="flex w-full flex-col gap-1 rounded-[20px] bg-white p-5 text-left shadow-card transition hover:shadow-floating focus-visible:outline-2 focus-visible:outline-primary"
-      onClick={onClick}
-      type="button"
-    >
-      <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary">
-        {formatRouteList(drug.route)}
-      </p>
-      <h3 className="font-semibold leading-snug text-ink">{drug.genericName}</h3>
-      {drug.genericNameTH && <p className="text-sm text-muted">{drug.genericNameTH}</p>}
-      <p className="mt-1 text-xs text-muted">{drug.tradeName} · {drug.strength}</p>
-    </button>
-  );
+function buildCompactPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 6) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages];
 }
 
 /* ──────────────────────────────────────────────────────────────
@@ -178,9 +174,12 @@ function DrugCard({ drug, onClick }: { drug: Drug; onClick: () => void }): JSX.E
 ────────────────────────────────────────────────────────────── */
 
 export function InjectableDrugPage(): JSX.Element {
-  const { drugs, loading, error } = useDrugs();
+  const pageSize = 10;
+  const { drugs, loading, error, refetch } = useDrugs();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Drug | null>(null);
+  const [page, setPage] = useState(1);
+  const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
 
   const injectables = useMemo(
     () => drugs.filter((d) => d.dosageForm === 'injection'),
@@ -192,65 +191,185 @@ export function InjectableDrugPage(): JSX.Element {
     if (!q) return injectables;
     return injectables.filter(
       (d) =>
+        (d.displayName ?? '').toLowerCase().includes(q) ||
         d.genericName.toLowerCase().includes(q) ||
         (d.genericNameTH ?? '').toLowerCase().includes(q) ||
         d.tradeName.toLowerCase().includes(q),
     );
   }, [injectables, query]);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const paginatedDrugs = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [query]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
+
+  function markImageBroken(drugId: string): void {
+    setBrokenImageIds((current) => (current.includes(drugId) ? current : [...current, drugId]));
+  }
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <ErrorAlert message={error} onRetry={() => void refetch()} />;
 
   return (
-    <div className="space-y-6">
-      {/* Hero */}
+    <div className="space-y-5">
       <section className="rounded-[32px] bg-white p-6 shadow-card">
         <p className="text-xs uppercase tracking-[0.16em] text-primary">Injectable Drug</p>
-        <h1 className="mt-4 text-5xl font-medium leading-tight tracking-normal text-ink">
+        <h1 className="mt-3 text-4xl font-semibold leading-tight text-ink">
           ข้อมูลยาฉีด — Reconstitution, Stability &amp; Compatibility
         </h1>
       </section>
 
-      {/* Search */}
+      {/* Search box */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" size={16} />
         <input
-          className="w-full rounded-[20px] border-0 bg-white py-3 pl-10 pr-4 text-sm shadow-card placeholder:text-muted focus:ring-2 focus:ring-primary"
+          className="w-full rounded-[20px] border-0 bg-white py-3 pl-10 pr-12 text-sm shadow-card placeholder:text-muted focus:ring-2 focus:ring-primary"
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ค้นหายาฉีด..."
           type="search"
           value={query}
         />
+        {query ? (
+          <button
+            aria-label="ล้างคำค้นหายาฉีด"
+            className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted transition hover:bg-subtle hover:text-ink"
+            onClick={() => setQuery('')}
+            type="button"
+          >
+            <X size={16} />
+          </button>
+        ) : null}
       </div>
 
-      {/* State: loading */}
-      {loading && (
-        <div className="flex justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+        <p>
+          {filtered.length === injectables.length
+            ? `${injectables.length} รายการ`
+            : `${filtered.length} จาก ${injectables.length} รายการ`}
+        </p>
+        {filtered.length > 0 ? (
+          <p>หน้า {page} / {totalPages}</p>
+        ) : null}
+      </div>
+
+      <div className="overflow-hidden rounded-[24px] border border-line bg-white">
+        <div className="flex items-center justify-between border-b border-line bg-subtle px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-muted">
+          <p>ชื่อยา (Injectable Drug)</p>
+          <p>รายละเอียด</p>
         </div>
-      )}
 
-      {/* State: error */}
-      {error && !loading && (
-        <div className="rounded-[20px] bg-danger-light px-5 py-4 text-sm text-danger">{error}</div>
-      )}
+        <div className="divide-y divide-line">
+          {paginatedDrugs.map((drug) => {
+            const label = formatDrugDisplayName(drug);
 
-      {/* State: empty */}
-      {!loading && !error && filtered.length === 0 && (
-        <div className="rounded-[20px] bg-white px-5 py-12 text-center shadow-card">
-          <p className="text-sm text-muted">
-            {query ? `ไม่พบยาฉีดที่ตรงกับ "${query}"` : 'ยังไม่มีข้อมูลยาฉีดในระบบ'}
+            return (
+              <button
+                className="flex w-full items-center gap-3 px-5 py-3.5 text-left transition hover:bg-subtle/60"
+                key={drug.id}
+                onClick={() => setSelected(drug)}
+                type="button"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] border border-line bg-subtle">
+                  {drug.imageUrl && !brokenImageIds.includes(drug.id) ? (
+                    <img
+                      alt={drug.genericName}
+                      className="h-full w-full object-contain p-1"
+                      onError={() => markImageBroken(drug.id)}
+                      src={drug.imageUrl}
+                    />
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase text-muted/40">inj</span>
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {normalizeDrugStatus(drug.status) === 'had' ? (
+                      <span
+                        aria-label="High Alert Drug"
+                        className="inline-flex shrink-0 items-center rounded-full border border-red-300 bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700"
+                      >
+                        HAD
+                      </span>
+                    ) : null}
+                    <p className="min-w-0 truncate text-sm font-medium text-ink">{label}</p>
+                  </div>
+                  {drug.genericNameTH ? (
+                    <p className="min-w-0 truncate text-sm text-muted">{drug.genericNameTH}</p>
+                  ) : null}
+                </div>
+
+                <ChevronRightIcon className="shrink-0 text-primary" size={20} strokeWidth={1.5} />
+              </button>
+            );
+          })}
+
+          {filtered.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted">
+              {query ? `ไม่พบยาฉีดที่ตรงกับ "${query}"` : 'ยังไม่มีข้อมูลยาฉีดในระบบ'}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {filtered.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
+          <p>
+            แสดง {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} จาก {filtered.length} รายการ
           </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 font-medium transition hover:border-ink hover:text-ink disabled:opacity-50"
+              disabled={page === 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              type="button"
+            >
+              <ChevronLeft size={14} />
+              ก่อนหน้า
+            </button>
+            <div className="flex items-center gap-1">
+              {buildCompactPageItems(page, totalPages).map((item, index) => (
+                item === 'ellipsis' ? (
+                  <span className="px-2 py-2 text-sm font-medium text-muted" key={`ellipsis-${index}`}>
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-medium transition ${
+                      item === page
+                        ? 'bg-primary text-white'
+                        : 'text-muted hover:bg-subtle hover:text-ink'
+                    }`}
+                    key={item}
+                    onClick={() => setPage(item)}
+                    type="button"
+                  >
+                    {item}
+                  </button>
+                )
+              ))}
+            </div>
+            <button
+              className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 font-medium transition hover:border-ink hover:text-ink disabled:opacity-50"
+              disabled={page === totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              type="button"
+            >
+              ถัดไป
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Drug grid */}
-      {!loading && filtered.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((drug) => (
-            <DrugCard key={drug.id} drug={drug} onClick={() => setSelected(drug)} />
-          ))}
-        </div>
-      )}
-
-      {/* Detail modal */}
       {selected && <InjectableDetailModal drug={selected} onClose={() => setSelected(null)} />}
     </div>
   );

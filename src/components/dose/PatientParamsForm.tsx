@@ -11,7 +11,7 @@ export interface PatientFormValues {
 }
 
 interface PatientParamsFormProps {
-  drugs: Array<{ id: string; genericName: string }>;
+  drugs: Array<{ id: string; label: string }>;
   onSubmit: (values: PatientFormValues) => void;
 }
 
@@ -38,7 +38,7 @@ export function PatientParamsForm({ drugs, onSubmit }: PatientParamsFormProps): 
         <select className={inputCls} {...register('drugId')}>
           {drugs.map((drug) => (
             <option key={drug.id} value={drug.id}>
-              {drug.genericName}
+              {drug.label}
             </option>
           ))}
         </select>

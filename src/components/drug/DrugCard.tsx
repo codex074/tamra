@@ -1,5 +1,6 @@
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import { formatRouteList } from '@/lib/route-label';
+import { formatDrugDisplayName } from '@/lib/utils';
 import type { Drug } from '@/types';
 
 interface DrugCardProps {
@@ -32,7 +33,7 @@ export function DrugCard({ drug, onSelect }: DrugCardProps): JSX.Element {
 
       {/* Drug name */}
       <h3 className="mt-2 text-xl font-semibold leading-snug tracking-tight text-ink">
-        {drug.genericName}
+        {formatDrugDisplayName(drug)}
       </h3>
       <p className="mt-0.5 text-sm text-muted">{drug.tradeName}</p>
 

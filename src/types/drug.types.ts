@@ -9,6 +9,8 @@ export type DosageForm =
   | 'patch'
   | 'inhaler'
   | 'suppository'
+  | 'eye_drops'
+  | 'ear_drops'
   | 'drops'
   | 'other';
 
@@ -55,6 +57,7 @@ export interface InjectionInfo {
 
 export interface Drug {
   id: string;
+  displayName?: string;
   genericName: string;
   genericNameTH?: string;
   tradeName: string;

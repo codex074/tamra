@@ -1,8 +1,9 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
   getDocs,
-  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -13,6 +14,8 @@ import type { AuditAction, AuditLog, UserProfile } from '@/types';
 
 const COL = 'auditLogs';
 const LOCAL_AUDIT_LOGS_KEY = 'tamraya.auditLogs';
+const MAX_AUDIT_LOGS = 100;
+const ALLOWED_AUDIT_ACTIONS: AuditAction[] = ['CREATE', 'UPDATE', 'DELETE'];
 
 function canUseLocalStorage(): boolean {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
@@ -43,6 +46,15 @@ function sortAuditLogs(logs: AuditLog[]): AuditLog[] {
   return [...logs].sort((a, b) => getTimestampValue(b.timestamp) - getTimestampValue(a.timestamp));
 }
 
+function isAllowedAction(action: AuditAction): boolean {
+  return ALLOWED_AUDIT_ACTIONS.includes(action);
+}
+
+function trimLocalAuditLogs(): void {
+  const trimmed = sortAuditLogs(readLocalAuditLogs().filter((log) => isAllowedAction(log.action))).slice(0, MAX_AUDIT_LOGS);
+  writeLocalAuditLogs(trimmed);
+}
+
 function getCurrentUser(): UserProfile | null {
   return useAuthStore.getState().user;
 }
@@ -69,6 +81,10 @@ export const auditService = {
     oldData?: Record<string, unknown>,
     newData?: Record<string, unknown>,
   ): Promise<void> {
+    if (!isAllowedAction(action)) {
+      return;
+    }
+
     const actor = buildActor(getCurrentUser());
     const timestamp = new Date().toISOString();
 
@@ -83,7 +99,7 @@ export const auditService = {
       ...actor,
     };
 
-    writeLocalAuditLogs(sortAuditLogs([localLog, ...readLocalAuditLogs()]).slice(0, 100));
+    writeLocalAuditLogs(sortAuditLogs([localLog, ...readLocalAuditLogs()].filter((log) => isAllowedAction(log.action))).slice(0, MAX_AUDIT_LOGS));
 
     try {
       await addDoc(collection(db, COL), {
@@ -95,14 +111,39 @@ export const auditService = {
         ...actor,
         timestamp: serverTimestamp(),
       });
+
+      await this.trimToLatest();
     } catch {
       // Keep the local fallback so admin pages still show recent activity offline/demo mode.
+      trimLocalAuditLogs();
     }
   },
 
-  async getLatest(maxRows = 10): Promise<AuditLog[]> {
+  async trimToLatest(): Promise<void> {
+    trimLocalAuditLogs();
+
     try {
-      const snap = await getDocs(query(collection(db, COL), orderBy('timestamp', 'desc'), limit(maxRows)));
+      const snap = await getDocs(query(collection(db, COL), orderBy('timestamp', 'desc')));
+      const docs = snap.docs.map((entry) => ({
+        id: entry.id,
+        action: entry.data().action as AuditAction,
+      }));
+
+      const idsToDelete = docs
+        .filter((entry, index) => !isAllowedAction(entry.action) || index >= MAX_AUDIT_LOGS)
+        .map((entry) => entry.id);
+
+      if (idsToDelete.length === 0) return;
+
+      await Promise.all(idsToDelete.map((id) => deleteDoc(doc(db, COL, id))));
+    } catch {
+      // Keep local trim as the fallback if Firestore cleanup is unavailable.
+    }
+  },
+
+  async getLatest(maxRows = MAX_AUDIT_LOGS): Promise<AuditLog[]> {
+    try {
+      const snap = await getDocs(query(collection(db, COL), orderBy('timestamp', 'desc')));
       const logs = snap.docs.map((entry) => {
         const data = entry.data();
         const timestampValue =
@@ -123,9 +164,10 @@ export const auditService = {
         } as AuditLog;
       });
 
-      return logs.length ? logs : readLocalAuditLogs().slice(0, maxRows);
+      const filtered = logs.filter((log) => isAllowedAction(log.action)).slice(0, Math.min(maxRows, MAX_AUDIT_LOGS));
+      return filtered.length ? filtered : readLocalAuditLogs().filter((log) => isAllowedAction(log.action)).slice(0, Math.min(maxRows, MAX_AUDIT_LOGS));
     } catch {
-      return readLocalAuditLogs().slice(0, maxRows);
+      return readLocalAuditLogs().filter((log) => isAllowedAction(log.action)).slice(0, Math.min(maxRows, MAX_AUDIT_LOGS));
     }
   },
 };

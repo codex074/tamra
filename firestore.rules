@@ -36,6 +36,7 @@ service cloud.firestore {
     match /auditLogs/{docId} {
       allow read: if isAdmin();
       allow create: if isAuthenticated();
+      allow delete: if isAuthenticated();
     }
 
     // Users — authenticated can read/write own doc; admin can read all

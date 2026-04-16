@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn, formatDrugDisplayName } from '@/lib/utils';
 import type { Drug, IVCompatibility } from '@/types';
 
 interface CompatMatrixProps {
@@ -36,7 +36,7 @@ export function CompatMatrix({ drugs, selectedIds, matrix, onSelectCell }: Compa
             <th />
             {selectedDrugs.map((drug) => (
               <th className="px-3 py-2 text-left text-sm font-medium text-ink" key={drug.id}>
-                {drug.genericName}
+                {formatDrugDisplayName(drug)}
               </th>
             ))}
           </tr>
@@ -44,7 +44,7 @@ export function CompatMatrix({ drugs, selectedIds, matrix, onSelectCell }: Compa
         <tbody>
           {selectedDrugs.map((row) => (
             <tr key={row.id}>
-              <th className="px-3 py-2 text-left text-sm font-medium text-ink">{row.genericName}</th>
+              <th className="px-3 py-2 text-left text-sm font-medium text-ink">{formatDrugDisplayName(row)}</th>
               {selectedDrugs.map((col) => {
                 if (row.id === col.id) {
                   return <td className="rounded-2xl bg-subtle px-3 py-4 text-center text-sm text-muted" key={col.id}>—</td>;

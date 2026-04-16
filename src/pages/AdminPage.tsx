@@ -9,13 +9,56 @@ import { useDrugs } from '@/hooks/useDrugs';
 import { formatRouteList } from '@/lib/route-label';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
-import { formatDateTime, titleCase } from '@/lib/utils';
+import { formatDateTime, formatDrugDisplayName, titleCase } from '@/lib/utils';
 import { auditService } from '@/services/audit.service';
 import { drugService } from '@/services/drug.service';
 import type { AuditLog, Drug } from '@/types';
 
+function getAuditDrugLabel(row: AuditLog): string {
+  const candidates = [
+    row.newData?.displayName,
+    row.oldData?.displayName,
+    row.newData?.genericName,
+    row.oldData?.genericName,
+  ];
+
+  const genericName = candidates.find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  if (genericName) return genericName;
+
+  return row.documentId;
+}
+
+function getAuditDetail(row: AuditLog): string {
+  if (row.collection !== 'drugs') {
+    return `${titleCase(row.collection)} · ${row.documentId}`;
+  }
+
+  return formatDrugDisplayName({
+    displayName: (row.newData?.displayName as string | undefined) ?? (row.oldData?.displayName as string | undefined),
+    genericName: (row.newData?.genericName as string | undefined) ?? (row.oldData?.genericName as string | undefined) ?? getAuditDrugLabel(row),
+    strength: (row.newData?.strength as string | undefined) ?? (row.oldData?.strength as string | undefined),
+  });
+}
+
+function buildCompactPageItems(currentPage: number, totalPages: number): Array<number | 'ellipsis'> {
+  if (totalPages <= 6) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, 'ellipsis', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, 'ellipsis', currentPage - 1, currentPage, currentPage + 1, 'ellipsis', totalPages];
+}
+
 export function AdminPage(): JSX.Element {
   const pageSize = 10;
+  const auditPageSize = 10;
   const { user } = useAuth();
   const { drugs, loading, error, refetch } = useDrugs();
   const [editingDrug, setEditingDrug] = useState<Drug | null>(null);
@@ -28,11 +71,12 @@ export function AdminPage(): JSX.Element {
   const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
   const [auditRows, setAuditRows] = useState<AuditLog[]>([]);
   const [auditLoading, setAuditLoading] = useState(true);
+  const [auditPage, setAuditPage] = useState(1);
 
   const filteredDrugs = useMemo(
     () =>
       drugs.filter((drug) =>
-        [drug.genericName, drug.genericNameTH, drug.tradeName, drug.strength, drug.therapeuticClass]
+        [drug.displayName, drug.genericName, drug.genericNameTH, drug.tradeName, drug.strength, drug.therapeuticClass]
           .join(' ')
           .toLowerCase()
           .includes(query.toLowerCase()),
@@ -45,6 +89,11 @@ export function AdminPage(): JSX.Element {
     const start = (page - 1) * pageSize;
     return filteredDrugs.slice(start, start + pageSize);
   }, [filteredDrugs, page]);
+  const auditTotalPages = Math.max(1, Math.ceil(auditRows.length / auditPageSize));
+  const paginatedAuditRows = useMemo(() => {
+    const start = (auditPage - 1) * auditPageSize;
+    return auditRows.slice(start, start + auditPageSize);
+  }, [auditPage, auditRows]);
 
   useEffect(() => {
     setPage(1);
@@ -55,10 +104,14 @@ export function AdminPage(): JSX.Element {
   }, [totalPages]);
 
   useEffect(() => {
+    setAuditPage((current) => Math.min(current, auditTotalPages));
+  }, [auditTotalPages]);
+
+  useEffect(() => {
     void (async () => {
       setAuditLoading(true);
       try {
-        setAuditRows(await auditService.getLatest(10));
+        setAuditRows(await auditService.getLatest(100));
       } finally {
         setAuditLoading(false);
       }
@@ -72,7 +125,7 @@ export function AdminPage(): JSX.Element {
   async function loadAuditLogs(): Promise<void> {
     setAuditLoading(true);
     try {
-      setAuditRows(await auditService.getLatest(10));
+      setAuditRows(await auditService.getLatest(100));
     } finally {
       setAuditLoading(false);
     }
@@ -91,7 +144,7 @@ export function AdminPage(): JSX.Element {
     }
 
     const confirmed = await confirmAction({
-      title: `ยืนยันการลบ ${drug.genericName}`,
+      title: `ยืนยันการลบ ${formatDrugDisplayName(drug)}`,
       text: 'รายการยานี้จะถูกนำออกจากระบบ และจะไม่แสดงใน formulary อีกต่อไป',
       confirmButtonText: 'ลบรายการ',
       icon: 'warning',
@@ -105,7 +158,7 @@ export function AdminPage(): JSX.Element {
         setEditingDrug(null);
       }
       await refreshAdminData();
-      await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบรายการ ${drug.genericName} เรียบร้อยแล้ว`);
+      await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบรายการ ${formatDrugDisplayName(drug)} เรียบร้อยแล้ว`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ลบข้อมูลไม่สำเร็จ';
       setDeleteError(message);
@@ -195,12 +248,24 @@ export function AdminPage(): JSX.Element {
               </p>
             </div>
             <div className="w-full max-w-md">
-              <input
-                className="w-full rounded-2xl border border-line bg-subtle px-4 py-3 text-sm text-ink placeholder:text-muted"
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="ค้นหาจากชื่อยา ชื่อการค้า ความแรง หรือกลุ่มยา"
-                value={query}
-              />
+              <div className="relative">
+                <input
+                  className="w-full rounded-2xl border border-line bg-subtle px-4 py-3 pr-12 text-sm text-ink placeholder:text-muted"
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="ค้นหาจากชื่อยา ชื่อการค้า ความแรง หรือกลุ่มยา"
+                  value={query}
+                />
+                {query ? (
+                  <button
+                    aria-label="ล้างคำค้นหา"
+                    className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted transition hover:bg-white hover:text-ink"
+                    onClick={() => setQuery('')}
+                    type="button"
+                  >
+                    <X size={16} />
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -251,7 +316,7 @@ export function AdminPage(): JSX.Element {
 
                           <div className="min-w-0">
                             <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted">{drug.therapeuticClass}</p>
-                            <h3 className="mt-2 text-lg font-semibold text-ink">{drug.genericName}</h3>
+                            <h3 className="mt-2 text-lg font-semibold text-ink">{formatDrugDisplayName(drug)}</h3>
                             <p className="mt-1 truncate text-sm text-muted">{drug.tradeName}</p>
                             <div className="mt-3">
                               <span
@@ -346,6 +411,7 @@ export function AdminPage(): JSX.Element {
               <tr>
                 <th className="px-4 py-3">Action</th>
                 <th className="px-4 py-3">Collection</th>
+                <th className="px-4 py-3">Details</th>
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Time</th>
               </tr>
@@ -353,25 +419,75 @@ export function AdminPage(): JSX.Element {
             <tbody>
               {auditLoading ? (
                 <tr className="border-t border-line text-sm">
-                  <td className="px-4 py-6 text-muted" colSpan={4}>กำลังโหลดประวัติการใช้งาน...</td>
+                  <td className="px-4 py-6 text-muted" colSpan={5}>กำลังโหลดประวัติการใช้งาน...</td>
                 </tr>
               ) : auditRows.length > 0 ? (
-                auditRows.map((row) => (
+                paginatedAuditRows.map((row) => (
                   <tr className="border-t border-line text-sm" key={row.id}>
                     <td className="px-4 py-3 text-ink">{row.action}</td>
                     <td className="px-4 py-3 text-muted">{titleCase(row.collection)}</td>
+                    <td className="px-4 py-3 text-muted">{getAuditDetail(row)}</td>
                     <td className="px-4 py-3 text-muted">{row.userEmail}</td>
                     <td className="px-4 py-3 text-muted">{formatDateTime(row.timestamp)}</td>
                   </tr>
                 ))
               ) : (
                 <tr className="border-t border-line text-sm">
-                  <td className="px-4 py-6 text-muted" colSpan={4}>ยังไม่มีประวัติการใช้งาน</td>
+                  <td className="px-4 py-6 text-muted" colSpan={5}>ยังไม่มีประวัติการใช้งาน</td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        {!auditLoading && auditRows.length > 0 ? (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted">
+              แสดง {(auditPage - 1) * auditPageSize + 1}-{Math.min(auditPage * auditPageSize, auditRows.length)} จาก {auditRows.length} รายการล่าสุด
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink disabled:opacity-50"
+                disabled={auditPage === 1}
+                onClick={() => setAuditPage((current) => Math.max(1, current - 1))}
+                type="button"
+              >
+                <ChevronLeft size={14} />
+                ก่อนหน้า
+              </button>
+              <div className="flex items-center gap-1">
+                {buildCompactPageItems(auditPage, auditTotalPages).map((item, index) => (
+                  item === 'ellipsis' ? (
+                    <span className="px-2 py-2 text-sm font-medium text-muted" key={`ellipsis-${index}`}>
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      className={`inline-flex h-10 min-w-10 items-center justify-center rounded-full px-3 text-sm font-medium transition ${
+                        item === auditPage
+                          ? 'bg-primary text-white'
+                          : 'text-muted hover:bg-subtle hover:text-ink'
+                      }`}
+                      key={item}
+                      onClick={() => setAuditPage(item)}
+                      type="button"
+                    >
+                      {item}
+                    </button>
+                  )
+                ))}
+              </div>
+              <button
+                className="inline-flex items-center gap-2 rounded-pill border border-line px-4 py-2 text-sm font-medium text-muted transition hover:border-ink hover:text-ink disabled:opacity-50"
+                disabled={auditPage === auditTotalPages}
+                onClick={() => setAuditPage((current) => Math.min(auditTotalPages, current + 1))}
+                type="button"
+              >
+                ถัดไป
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       {editingDrug ? (

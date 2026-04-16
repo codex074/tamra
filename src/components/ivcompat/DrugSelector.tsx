@@ -1,3 +1,4 @@
+import { formatDrugDisplayName } from '@/lib/utils';
 import type { Drug } from '@/types';
 
 interface DrugSelectorProps {
@@ -14,7 +15,7 @@ export function DrugSelector({ drugs, selectedIds, onToggle }: DrugSelectorProps
         {drugs.map((drug) => (
           <label className="flex items-center gap-3 rounded-2xl bg-subtle px-4 py-3 text-sm" key={drug.id}>
             <input checked={selectedIds.includes(drug.id)} onChange={() => onToggle(drug.id)} type="checkbox" />
-            <span>{drug.genericName}</span>
+            <span>{formatDrugDisplayName(drug)}</span>
           </label>
         ))}
       </div>
