@@ -1,8 +1,10 @@
 import { X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import { formatRouteList } from '@/lib/route-label';
+import { formatDateTime } from '@/lib/utils';
+import { auditService } from '@/services/audit.service';
 import type { Drug } from '@/types';
 
 interface DrugDetailModalProps {
@@ -13,6 +15,13 @@ interface DrugDetailModalProps {
 export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.Element {
   const statusColor = getStatusColor(drug.status);
   const [imageBroken, setImageBroken] = useState(false);
+
+  useEffect(() => {
+    void auditService.log('VIEW', 'drugs', drug.id, undefined, {
+      genericName: drug.genericName,
+      tradeName: drug.tradeName,
+    });
+  }, [drug.genericName, drug.id, drug.tradeName]);
 
   return (
     <ModalPortal>
@@ -150,6 +159,10 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
                   )}
                 </article>
               )}
+
+              <div className="mt-5 flex justify-end">
+                <p className="text-xs text-muted">อัปเดตล่าสุด {formatDateTime(drug.updatedAt)}</p>
+              </div>
             </div>
           </div>
         </div>

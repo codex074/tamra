@@ -9,14 +9,10 @@ import { useDrugs } from '@/hooks/useDrugs';
 import { formatRouteList } from '@/lib/route-label';
 import { getStatusColor, getStatusLabel } from '@/lib/drug-status';
 import { confirmAction, showErrorAlert, showSuccessAlert } from '@/lib/sweet-alert';
+import { formatDateTime, titleCase } from '@/lib/utils';
+import { auditService } from '@/services/audit.service';
 import { drugService } from '@/services/drug.service';
-import type { Drug } from '@/types';
-
-const auditRows = [
-  { action: 'UPDATE', collection: 'drugs', by: 'demo@tamraya.app', time: '2026-04-12 21:10' },
-  { action: 'CREATE', collection: 'doseRules', by: 'demo@tamraya.app', time: '2026-04-12 20:42' },
-  { action: 'VIEW', collection: 'ivCompatibility', by: 'pharmd@hospital.local', time: '2026-04-12 20:35' },
-];
+import type { AuditLog, Drug } from '@/types';
 
 export function AdminPage(): JSX.Element {
   const pageSize = 10;
@@ -30,6 +26,8 @@ export function AdminPage(): JSX.Element {
   const [cleanupMessage, setCleanupMessage] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [brokenImageIds, setBrokenImageIds] = useState<string[]>([]);
+  const [auditRows, setAuditRows] = useState<AuditLog[]>([]);
+  const [auditLoading, setAuditLoading] = useState(true);
 
   const filteredDrugs = useMemo(
     () =>
@@ -56,12 +54,32 @@ export function AdminPage(): JSX.Element {
     setPage((current) => Math.min(current, totalPages));
   }, [totalPages]);
 
+  useEffect(() => {
+    void (async () => {
+      setAuditLoading(true);
+      try {
+        setAuditRows(await auditService.getLatest(10));
+      } finally {
+        setAuditLoading(false);
+      }
+    })();
+  }, []);
+
   function markImageBroken(drugId: string): void {
     setBrokenImageIds((current) => (current.includes(drugId) ? current : [...current, drugId]));
   }
 
+  async function loadAuditLogs(): Promise<void> {
+    setAuditLoading(true);
+    try {
+      setAuditRows(await auditService.getLatest(10));
+    } finally {
+      setAuditLoading(false);
+    }
+  }
+
   async function refreshAdminData(): Promise<void> {
-    await refetch();
+    await Promise.all([refetch(), loadAuditLogs()]);
   }
 
   async function handleDelete(drug: Drug): Promise<void> {
@@ -86,7 +104,7 @@ export function AdminPage(): JSX.Element {
       if (editingDrug?.id === drug.id) {
         setEditingDrug(null);
       }
-      await refetch();
+      await refreshAdminData();
       await showSuccessAlert('ลบข้อมูลสำเร็จ', `ลบรายการ ${drug.genericName} เรียบร้อยแล้ว`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ลบข้อมูลไม่สำเร็จ';
@@ -108,7 +126,7 @@ export function AdminPage(): JSX.Element {
       drugService.clearLocalOverrides();
       setCleanupMessage('ล้าง local cache ของรายการยาเรียบร้อยแล้ว');
       setDeleteError(null);
-      await refetch();
+      await refreshAdminData();
       await showSuccessAlert('ล้างแคชสำเร็จ', 'ข้อมูลในเครื่องถูกรีเซ็ตแล้ว และระบบได้ดึงข้อมูลล่าสุดกลับมาใหม่');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ล้าง local cache ไม่สำเร็จ';
@@ -333,14 +351,24 @@ export function AdminPage(): JSX.Element {
               </tr>
             </thead>
             <tbody>
-              {auditRows.map((row) => (
-                <tr className="border-t border-line text-sm" key={`${row.action}-${row.time}`}>
-                  <td className="px-4 py-3 text-ink">{row.action}</td>
-                  <td className="px-4 py-3 text-muted">{row.collection}</td>
-                  <td className="px-4 py-3 text-muted">{row.by}</td>
-                  <td className="px-4 py-3 text-muted">{row.time}</td>
+              {auditLoading ? (
+                <tr className="border-t border-line text-sm">
+                  <td className="px-4 py-6 text-muted" colSpan={4}>กำลังโหลดประวัติการใช้งาน...</td>
                 </tr>
-              ))}
+              ) : auditRows.length > 0 ? (
+                auditRows.map((row) => (
+                  <tr className="border-t border-line text-sm" key={row.id}>
+                    <td className="px-4 py-3 text-ink">{row.action}</td>
+                    <td className="px-4 py-3 text-muted">{titleCase(row.collection)}</td>
+                    <td className="px-4 py-3 text-muted">{row.userEmail}</td>
+                    <td className="px-4 py-3 text-muted">{formatDateTime(row.timestamp)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr className="border-t border-line text-sm">
+                  <td className="px-4 py-6 text-muted" colSpan={4}>ยังไม่มีประวัติการใช้งาน</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

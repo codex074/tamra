@@ -13,6 +13,7 @@ import {
 import { db } from '@/lib/firebase';
 import { normalizeDrugStatus } from '@/lib/drug-status';
 import { mockDrugs } from '@/lib/mock-data';
+import { auditService } from '@/services/audit.service';
 import type { Drug, DrugStatus } from '@/types';
 
 const COL = 'drugs';
@@ -231,10 +232,12 @@ export const drugService = {
       const ref = await addDoc(collection(db, COL), {
         ...payload,
       });
+      await auditService.log('CREATE', COL, ref.id, undefined, data as Record<string, unknown>);
       return ref.id;
     } catch {
       const drug = buildLocalDrug(data);
       upsertLocalDrug(drug);
+      await auditService.log('CREATE', COL, drug.id, undefined, drug as unknown as Record<string, unknown>);
       return drug.id;
     }
   },
@@ -244,14 +247,22 @@ export const drugService = {
     if (!existing) throw new Error('ไม่พบรายการยาที่ต้องการแก้ไข');
 
     if (isLocalManagedDrug(id)) {
-      upsertLocalDrug({
+      const nextDrug = {
         ...existing,
         ...data,
         id,
         createdAt: existing.createdAt,
         updatedAt: new Date().toISOString(),
-      });
+      };
+      upsertLocalDrug(nextDrug);
       unmarkDrugDeleted(id);
+      await auditService.log(
+        'UPDATE',
+        COL,
+        id,
+        existing as unknown as Record<string, unknown>,
+        nextDrug as unknown as Record<string, unknown>,
+      );
       return;
     }
 
@@ -261,27 +272,47 @@ export const drugService = {
         updatedAt: serverTimestamp(),
       });
       await updateDoc(doc(db, COL, id), payload);
+      await auditService.log('UPDATE', COL, id, existing as unknown as Record<string, unknown>, data as Record<string, unknown>);
     } catch {
-      upsertLocalDrug({
+      const nextDrug = {
         ...existing,
         ...data,
         id,
         createdAt: existing.createdAt,
         updatedAt: new Date().toISOString(),
-      });
+      };
+      upsertLocalDrug(nextDrug);
+      await auditService.log(
+        'UPDATE',
+        COL,
+        id,
+        existing as unknown as Record<string, unknown>,
+        nextDrug as unknown as Record<string, unknown>,
+      );
     }
   },
 
   async remove(id: string): Promise<void> {
+    const existing = await this.getById(id);
+
     if (isLocalManagedDrug(id)) {
       markDrugDeleted(id);
+      if (existing) {
+        await auditService.log('DELETE', COL, id, existing as unknown as Record<string, unknown>);
+      }
       return;
     }
 
     try {
       await deleteDoc(doc(db, COL, id));
+      if (existing) {
+        await auditService.log('DELETE', COL, id, existing as unknown as Record<string, unknown>);
+      }
     } catch {
       markDrugDeleted(id);
+      if (existing) {
+        await auditService.log('DELETE', COL, id, existing as unknown as Record<string, unknown>);
+      }
     }
   },
 };

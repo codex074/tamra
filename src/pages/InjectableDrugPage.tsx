@@ -1,8 +1,10 @@
 import { Search, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { useDrugs } from '@/hooks/useDrugs';
 import { formatRouteList } from '@/lib/route-label';
+import { formatDateTime } from '@/lib/utils';
+import { auditService } from '@/services/audit.service';
 import type { Drug } from '@/types';
 
 /* ──────────────────────────────────────────────────────────────
@@ -39,6 +41,13 @@ function InjectableDetailModal({ drug, onClose }: DetailModalProps): JSX.Element
   const hasStability = !!info?.stability;
   const hasCompatibility =
     info?.solutionCompatibility || info?.additiveCompatibility || info?.syringeCompatibility || info?.ySiteCompatibility;
+
+  useEffect(() => {
+    void auditService.log('VIEW', 'drugs', drug.id, undefined, {
+      genericName: drug.genericName,
+      tradeName: drug.tradeName,
+    });
+  }, [drug.genericName, drug.id, drug.tradeName]);
 
   return (
     <ModalPortal>
@@ -132,6 +141,9 @@ function InjectableDetailModal({ drug, onClose }: DetailModalProps): JSX.Element
                 </Section>
               )}
 
+              <div className="flex justify-end pt-2">
+                <p className="text-xs text-muted">อัปเดตล่าสุด {formatDateTime(drug.updatedAt)}</p>
+              </div>
             </div>
           </div>
         </div>
