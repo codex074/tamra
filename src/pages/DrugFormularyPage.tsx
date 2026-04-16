@@ -51,10 +51,13 @@ export function DrugFormularyPage(): JSX.Element {
 
   return (
     <div className="space-y-5">
-      {/* Page heading */}
-      <div>
-        <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-primary">Drug Information</p>
-      </div>
+      {/* Page hero */}
+      <section className="rounded-[32px] bg-white p-6 shadow-card">
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-primary">Drug Information</p>
+        <h1 className="mt-3 text-4xl font-semibold leading-tight text-ink">
+          ตำรายา — ค้นหาและเปิดดูรายละเอียดยา
+        </h1>
+      </section>
 
       {/* Search box */}
       <DrugSearchBar onChange={setQuery} value={query} />

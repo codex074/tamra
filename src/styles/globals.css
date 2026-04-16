@@ -6,8 +6,8 @@
 
 :root {
   --font-th-sarabun: 'Sarabun', 'TH Sarabun New', 'THSarabunNew', Arial, sans-serif;
-  color: #1C2B33;
-  background: #F1F4F7;
+  color: #134E4A;
+  background: #F0FDFA;
   font-family: var(--font-th-sarabun);
   font-feature-settings: 'liga' 1;
   text-rendering: optimizeLegibility;
@@ -21,7 +21,7 @@ html,
 body {
   margin: 0;
   min-width: 320px;
-  background: #F1F4F7;
+  background: #F0FDFA;
   font-family: var(--font-th-sarabun);
 }
 

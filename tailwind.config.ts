@@ -6,19 +6,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Meta Store Design System
-        ink: '#1C2B33',          // Dark Charcoal — headings
+        // Medical Design System — Teal/Cyan palette
+        ink: '#134E4A',          // Teal-900 — headings
         muted: '#5D6C7B',        // Slate Gray — body text / secondary
-        line: '#DEE3E9',         // Divider Gray
+        line: '#CCFBF1',         // Teal-100 — divider
         surface: '#FFFFFF',
-        subtle: '#F1F4F7',       // Soft Gray — secondary surface
-        'near-black': '#1C1E21', // Dark section backgrounds
+        subtle: '#F0FDFA',       // Teal-50 — secondary surface
+        'near-black': '#0F2E2B', // Deep teal — dark section backgrounds
         primary: {
-          DEFAULT: '#0064E0',    // Meta Blue — primary CTA
-          hover: '#0143B5',      // Meta Blue Hover
-          pressed: '#004BB9',    // Meta Blue Pressed
-          light: '#E8F3FF',      // Baby Blue — badge/chip bg
-          dark: '#0143B5',
+          DEFAULT: '#0891B2',    // Cyan-600 — primary CTA
+          hover: '#0E7490',      // Cyan-700 — hover
+          pressed: '#155E75',    // Cyan-800 — pressed
+          light: '#ECFEFF',      // Cyan-50 — badge/chip bg
+          dark: '#0E7490',
         },
         success: {
           DEFAULT: '#007D1E',

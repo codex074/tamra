@@ -5,11 +5,13 @@ import { AdminPage } from '@/pages/AdminPage';
 import { DoseCalculatorPage } from '@/pages/DoseCalculatorPage';
 import { DrugFormularyPage } from '@/pages/DrugFormularyPage';
 import { InjectableDrugPage } from '@/pages/InjectableDrugPage';
+import { ClinicLandingPage } from '@/pages/ClinicLandingPage';
 import { LoginPage } from '@/pages/LoginPage';
 
 export default function App(): JSX.Element {
   return (
     <Routes>
+      <Route path="/clinic" element={<ClinicLandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<AppLayout />}>
         <Route index element={<Navigate to="/formulary" replace />} />
