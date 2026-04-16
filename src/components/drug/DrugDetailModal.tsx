@@ -105,36 +105,48 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
 
               {/* Injection info */}
               {drug.dosageForm === 'injection' && drug.injectionInfo && (
-                <article className="mt-4 rounded-[16px] border border-line p-4">
-                  <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการผสมยา (Reconstitution &amp; Solution)</h3>
-                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                    {drug.injectionInfo.reconstitutionForm && <div><dt className="font-semibold text-ink">รูปแบบผงยา</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.reconstitutionForm}</dd></div>}
-                    {drug.injectionInfo.reconstitutionVolume && <div><dt className="font-semibold text-ink">ปริมาตรสารละลาย</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.reconstitutionVolume}</dd></div>}
-                    {drug.injectionInfo.compatibleSolutions && <div><dt className="font-semibold text-ink">ชนิดสารละลายที่เข้ากัน</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.compatibleSolutions}</dd></div>}
-                    {drug.injectionInfo.dilutionVolume && <div><dt className="font-semibold text-ink">ปริมาตรสารละลาย (Dilution)</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.dilutionVolume}</dd></div>}
-                  </dl>
+                <article className="mt-4 rounded-[16px] border border-line p-4 space-y-4">
+                  {(drug.injectionInfo.diluent || drug.injectionInfo.compatibleSolutions) && (
+                    <>
+                      <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Diluent</h3>
+                      <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                        {drug.injectionInfo.diluent && <div className="sm:col-span-2"><dt className="font-semibold text-ink">Diluent</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.diluent}</dd></div>}
+                        {drug.injectionInfo.compatibleSolutions && <div className="sm:col-span-2"><dt className="font-semibold text-ink">ชนิดสารละลายที่เข้ากัน</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.compatibleSolutions}</dd></div>}
+                      </dl>
+                    </>
+                  )}
 
-                  <h3 className="mt-4 text-xs font-medium uppercase tracking-[0.18em] text-primary">ความคงตัว (Stability)</h3>
-                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                    {drug.injectionInfo.stability2_8C && <div><dt className="font-semibold text-ink">อุณหภูมิ 2-8 °C</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.stability2_8C}</dd></div>}
-                    {drug.injectionInfo.stabilityRoom && <div><dt className="font-semibold text-ink">อุณหภูมิห้อง (25 °C)</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.stabilityRoom}</dd></div>}
-                    {drug.injectionInfo.stability2_8CAfterMix && <div><dt className="font-semibold text-ink">2-8 °C (หลังผสม)</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.stability2_8CAfterMix}</dd></div>}
-                    {drug.injectionInfo.stabilityRoomAfterMix && <div><dt className="font-semibold text-ink">อุณหภูมิห้อง (หลังผสม)</dt><dd className="mt-0.5 text-muted">{drug.injectionInfo.stabilityRoomAfterMix}</dd></div>}
-                  </dl>
+                  {drug.injectionInfo.administration && (
+                    <>
+                      <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Administration</h3>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{drug.injectionInfo.administration}</p>
+                    </>
+                  )}
 
-                  {drug.injectionInfo.injectionReference && (
-                    <div className="mt-4 text-sm">
-                      <span className="font-semibold text-ink">อ้างอิง: </span>
-                      <a
-                        className="text-primary underline"
-                        href={drug.injectionInfo.injectionReference}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                      >
-                        อ่านเพิ่มเติม ↗
-                      </a>
-                      <p className="mt-0.5 break-all text-xs text-muted">{drug.injectionInfo.injectionReference}</p>
-                    </div>
+                  {drug.injectionInfo.stability && (
+                    <>
+                      <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Stability</h3>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{drug.injectionInfo.stability}</p>
+                    </>
+                  )}
+
+                  {(drug.injectionInfo.solutionCompatibility || drug.injectionInfo.additiveCompatibility || drug.injectionInfo.syringeCompatibility || drug.injectionInfo.ySiteCompatibility) && (
+                    <>
+                      <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Compatibility</h3>
+                      <dl className="grid gap-3 text-sm">
+                        {drug.injectionInfo.solutionCompatibility && <div><dt className="font-semibold text-ink">Solution Compatibility</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.injectionInfo.solutionCompatibility}</dd></div>}
+                        {drug.injectionInfo.additiveCompatibility && <div><dt className="font-semibold text-ink">Additive Compatibility</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.injectionInfo.additiveCompatibility}</dd></div>}
+                        {drug.injectionInfo.syringeCompatibility && <div><dt className="font-semibold text-ink">Drug in Syringe Compatibility</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.injectionInfo.syringeCompatibility}</dd></div>}
+                        {drug.injectionInfo.ySiteCompatibility && <div><dt className="font-semibold text-ink">Y-Site Injection Compatibility</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.injectionInfo.ySiteCompatibility}</dd></div>}
+                      </dl>
+                    </>
+                  )}
+
+                  {drug.injectionInfo.injectableNote && (
+                    <>
+                      <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Note</h3>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">{drug.injectionInfo.injectableNote}</p>
+                    </>
                   )}
                 </article>
               )}

@@ -42,15 +42,15 @@ export type RuleType = 'fixed' | 'weight_based' | 'bsa_based' | 'crcl_adjusted' 
 export type Frequency = 'once' | 'bid' | 'tid' | 'qid' | 'q4h' | 'q6h' | 'q8h' | 'q12h' | 'q24h' | 'prn' | 'other';
 
 export interface InjectionInfo {
-  reconstitutionForm?: string;       // รูปแบบผงยา
-  reconstitutionVolume?: string;     // ปริมาตรสารละลาย (reconstitution)
+  diluent?: string;                  // Diluent / สารละลายที่ใช้เจือจาง
   compatibleSolutions?: string;      // ชนิดสารละลายที่เข้ากัน
-  dilutionVolume?: string;           // ปริมาตรสารละลาย (dilution)
-  stability2_8C?: string;            // ความคงตัว 2-8°C (ก่อนผสม)
-  stabilityRoom?: string;            // ความคงตัวอุณหภูมิห้อง (ก่อนผสม)
-  stability2_8CAfterMix?: string;    // ความคงตัว 2-8°C (หลังผสม)
-  stabilityRoomAfterMix?: string;    // ความคงตัวอุณหภูมิห้อง (หลังผสม)
-  injectionReference?: string;       // URL อ้างอิง
+  administration?: string;           // วิธีการบริหารยา / Administration
+  stability?: string;                // ความคงตัว (Stability)
+  solutionCompatibility?: string;    // Solution Compatibility
+  additiveCompatibility?: string;    // Additive Compatibility
+  syringeCompatibility?: string;     // Drug in Syringe Compatibility
+  ySiteCompatibility?: string;       // Y-Site Injection Compatibility
+  injectableNote?: string;           // หมายเหตุสำหรับยา injectable
 }
 
 export interface Drug {

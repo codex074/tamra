@@ -28,15 +28,15 @@ const drugSchema = z.object({
   status: z.enum(['had', 'uc_free', 'staff_order', 'ned_national', 'all_rights', 'ocpa', 'ned_only', 'restrict_atb', 'self_pay']),
   notes: z.string(),
   dosingInfo: z.string().optional(),
-  reconstitutionForm: z.string().optional(),
-  reconstitutionVolume: z.string().optional(),
+  diluent: z.string().optional(),
   compatibleSolutions: z.string().optional(),
-  dilutionVolume: z.string().optional(),
-  stability2_8C: z.string().optional(),
-  stabilityRoom: z.string().optional(),
-  stability2_8CAfterMix: z.string().optional(),
-  stabilityRoomAfterMix: z.string().optional(),
-  injectionReference: z.string().optional(),
+  administration: z.string().optional(),
+  stability: z.string().optional(),
+  solutionCompatibility: z.string().optional(),
+  additiveCompatibility: z.string().optional(),
+  syringeCompatibility: z.string().optional(),
+  ySiteCompatibility: z.string().optional(),
+  injectableNote: z.string().optional(),
 });
 
 type DrugFormValues = z.infer<typeof drugSchema>;
@@ -68,15 +68,15 @@ function getDefaultValues(drug?: Drug | null): DrugFormValues {
     status: normalizeDrugStatus(drug?.status ?? 'all_rights') as DrugFormValues['status'],
     notes: drug?.notes ?? '',
     dosingInfo: drug?.dosingInfo ?? '',
-    reconstitutionForm: drug?.injectionInfo?.reconstitutionForm ?? '',
-    reconstitutionVolume: drug?.injectionInfo?.reconstitutionVolume ?? '',
+    diluent: drug?.injectionInfo?.diluent ?? '',
     compatibleSolutions: drug?.injectionInfo?.compatibleSolutions ?? '',
-    dilutionVolume: drug?.injectionInfo?.dilutionVolume ?? '',
-    stability2_8C: drug?.injectionInfo?.stability2_8C ?? '',
-    stabilityRoom: drug?.injectionInfo?.stabilityRoom ?? '',
-    stability2_8CAfterMix: drug?.injectionInfo?.stability2_8CAfterMix ?? '',
-    stabilityRoomAfterMix: drug?.injectionInfo?.stabilityRoomAfterMix ?? '',
-    injectionReference: drug?.injectionInfo?.injectionReference ?? '',
+    administration: drug?.injectionInfo?.administration ?? '',
+    stability: drug?.injectionInfo?.stability ?? '',
+    solutionCompatibility: drug?.injectionInfo?.solutionCompatibility ?? '',
+    additiveCompatibility: drug?.injectionInfo?.additiveCompatibility ?? '',
+    syringeCompatibility: drug?.injectionInfo?.syringeCompatibility ?? '',
+    ySiteCompatibility: drug?.injectionInfo?.ySiteCompatibility ?? '',
+    injectableNote: drug?.injectionInfo?.injectableNote ?? '',
   };
 }
 
@@ -201,15 +201,15 @@ export function DrugForm({
       dosingInfo: values.dosingInfo || undefined,
       injectionInfo: values.dosageForm === 'injection'
         ? {
-            reconstitutionForm: values.reconstitutionForm,
-            reconstitutionVolume: values.reconstitutionVolume,
+            diluent: values.diluent,
             compatibleSolutions: values.compatibleSolutions,
-            dilutionVolume: values.dilutionVolume,
-            stability2_8C: values.stability2_8C,
-            stabilityRoom: values.stabilityRoom,
-            stability2_8CAfterMix: values.stability2_8CAfterMix,
-            stabilityRoomAfterMix: values.stabilityRoomAfterMix,
-            injectionReference: values.injectionReference,
+            administration: values.administration,
+            stability: values.stability,
+            solutionCompatibility: values.solutionCompatibility,
+            additiveCompatibility: values.additiveCompatibility,
+            syringeCompatibility: values.syringeCompatibility,
+            ySiteCompatibility: values.ySiteCompatibility,
+            injectableNote: values.injectableNote,
           }
         : undefined,
     };
@@ -408,50 +408,50 @@ export function DrugForm({
       {dosageForm === 'injection' && (
         <div className="grid gap-4 rounded-[16px] border border-line p-4">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการผสมยา (Reconstitution &amp; Solution)</p>
+          {/* Diluent */}
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted">รูปแบบผงยา</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น Lyophilized powder" {...register('reconstitutionForm')} />
+              <label className="mb-1 block text-xs font-medium text-muted">Diluent</label>
+              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น NSS 100 mL, D5W 250 mL" {...register('diluent')} />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">ปริมาตรสารละลาย (Reconstitution)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 10 mL SW" {...register('reconstitutionVolume')} />
-            </div>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted">ชนิดสารละลายที่เข้ากัน</label>
               <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น NSS, D5W, LRS" {...register('compatibleSolutions')} />
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">ปริมาตรสารละลาย (Dilution)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น ~100 mL" {...register('dilutionVolume')} />
-            </div>
           </div>
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ความคงตัว (Stability)</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">2-8 °C (ก่อนผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stability2_8C')} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">อุณหภูมิห้อง (ก่อนผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stabilityRoom')} />
-            </div>
+          {/* Administration */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Administration</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="วิธีการบริหารยา เช่น IV infusion over 30 min" rows={2} {...register('administration')} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">2-8 °C (หลังผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stability2_8CAfterMix')} />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-muted">อุณหภูมิห้อง (หลังผสม)</label>
-              <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" {...register('stabilityRoomAfterMix')} />
-            </div>
+          {/* Stability */}
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Stability</p>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Stability</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุความคงตัวของยา" rows={2} {...register('stability')} />
+          </div>
+          {/* Compatibility */}
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">Compatibility</p>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Solution Compatibility</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุความเข้ากันได้กับสารละลาย" rows={2} {...register('solutionCompatibility')} />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted">อ้างอิง (URL)</label>
-            <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="https://..." type="url" {...register('injectionReference')} />
+            <label className="mb-1 block text-xs font-medium text-muted">Additive Compatibility</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุความเข้ากันได้เมื่อผสมกับยาอื่นใน bag เดียวกัน" rows={2} {...register('additiveCompatibility')} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Drug in Syringe Compatibility</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุความเข้ากันได้ใน syringe" rows={2} {...register('syringeCompatibility')} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Y-Site Injection Compatibility</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุความเข้ากันได้ผ่าน Y-site" rows={2} {...register('ySiteCompatibility')} />
+          </div>
+          {/* Note */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Note</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="หมายเหตุเพิ่มเติม" rows={2} {...register('injectableNote')} />
           </div>
         </div>
       )}

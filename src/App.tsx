@@ -4,7 +4,7 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { AdminPage } from '@/pages/AdminPage';
 import { DoseCalculatorPage } from '@/pages/DoseCalculatorPage';
 import { DrugFormularyPage } from '@/pages/DrugFormularyPage';
-import { IVCompatPage } from '@/pages/IVCompatPage';
+import { InjectableDrugPage } from '@/pages/InjectableDrugPage';
 import { LoginPage } from '@/pages/LoginPage';
 
 export default function App(): JSX.Element {
@@ -15,7 +15,7 @@ export default function App(): JSX.Element {
         <Route index element={<Navigate to="/formulary" replace />} />
         <Route path="formulary" element={<DrugFormularyPage />} />
         <Route path="dose-calculator" element={<DoseCalculatorPage />} />
-        <Route path="iv-compatibility" element={<IVCompatPage />} />
+        <Route path="injectable-drugs" element={<InjectableDrugPage />} />
         <Route
           path="admin"
           element={

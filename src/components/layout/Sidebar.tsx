@@ -1,4 +1,4 @@
-import { Pill, Shield, TestTubeDiagonal, X } from 'lucide-react';
+import { Pill, Shield, Syringe, X } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUIStore } from '@/store/ui.store';
@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 const publicLinks = [
   { to: '/formulary', label: 'Drug Information', icon: Pill },
-  { to: '/iv-compatibility', label: 'IV Compatibility', icon: TestTubeDiagonal },
+  { to: '/injectable-drugs', label: 'Injectable Drug', icon: Syringe },
 ];
 
 function SidebarContent({ onClose }: { onClose?: () => void }): JSX.Element {
