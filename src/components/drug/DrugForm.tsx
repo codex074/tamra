@@ -28,7 +28,17 @@ const drugSchema = z.object({
   storage: z.string(),
   status: z.enum(['had', 'uc_free', 'staff_order', 'ned_national', 'all_rights', 'ocpa', 'ned_only', 'restrict_atb', 'self_pay']),
   notes: z.string(),
-  dosingInfo: z.string().optional(),
+  usualAdultDose: z.string().optional(),
+  pediatricDose: z.string().optional(),
+  geriatricDose: z.string().optional(),
+  renalImpairment: z.string().optional(),
+  hepaticImpairment: z.string().optional(),
+  dialysisAdjustment: z.string().optional(),
+  loadingDose: z.string().optional(),
+  maxDose: z.string().optional(),
+  dosingAdministration: z.string().optional(),
+  reconstitution: z.string().optional(),
+  monitoringParameters: z.string().optional(),
   diluent: z.string().optional(),
   compatibleSolutions: z.string().optional(),
   administration: z.string().optional(),
@@ -69,7 +79,17 @@ function getDefaultValues(drug?: Drug | null): DrugFormValues {
     storage: drug?.storage ?? 'เก็บที่อุณหภูมิห้อง',
     status: normalizeDrugStatus(drug?.status ?? 'all_rights') as DrugFormValues['status'],
     notes: drug?.notes ?? '',
-    dosingInfo: drug?.dosingInfo ?? '',
+    usualAdultDose: drug?.dosing?.usualAdultDose ?? '',
+    pediatricDose: drug?.dosing?.pediatricDose ?? '',
+    geriatricDose: drug?.dosing?.geriatricDose ?? '',
+    renalImpairment: drug?.dosing?.renalImpairment ?? '',
+    hepaticImpairment: drug?.dosing?.hepaticImpairment ?? '',
+    dialysisAdjustment: drug?.dosing?.dialysisAdjustment ?? '',
+    loadingDose: drug?.dosing?.loadingDose ?? '',
+    maxDose: drug?.dosing?.maxDose ?? '',
+    dosingAdministration: drug?.dosing?.administration ?? '',
+    reconstitution: drug?.dosing?.reconstitution ?? '',
+    monitoringParameters: drug?.dosing?.monitoringParameters ?? '',
     diluent: drug?.injectionInfo?.diluent ?? '',
     compatibleSolutions: drug?.injectionInfo?.compatibleSolutions ?? '',
     administration: drug?.injectionInfo?.administration ?? '',
@@ -201,7 +221,19 @@ export function DrugForm({
       route: selectedRoutes,
       updatedBy: user?.uid ?? 'unknown',
       imageUrl,
-      dosingInfo: values.dosingInfo || undefined,
+      dosing: {
+        usualAdultDose: values.usualAdultDose || undefined,
+        pediatricDose: values.pediatricDose || undefined,
+        geriatricDose: values.geriatricDose || undefined,
+        renalImpairment: values.renalImpairment || undefined,
+        hepaticImpairment: values.hepaticImpairment || undefined,
+        dialysisAdjustment: values.dialysisAdjustment || undefined,
+        loadingDose: values.loadingDose || undefined,
+        maxDose: values.maxDose || undefined,
+        administration: values.dosingAdministration || undefined,
+        reconstitution: values.reconstitution || undefined,
+        monitoringParameters: values.monitoringParameters || undefined,
+      },
       injectionInfo: values.dosageForm === 'injection'
         ? {
             diluent: values.diluent,
@@ -386,14 +418,66 @@ export function DrugForm({
         <input className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ยาที่มีปฏิกิริยา" {...register('interactions')} />
       </div>
 
-      <div>
-        <label className="mb-1 block text-xs font-medium text-muted">ข้อมูลการใช้ยา (Dosing Information)</label>
-        <textarea
-          className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm"
-          placeholder="ขนาดยา วิธีใช้ ข้อควรระวัง ฯลฯ"
-          rows={4}
-          {...register('dosingInfo')}
-        />
+      <div className="grid gap-3 rounded-[16px] border border-line p-4">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการใช้ยา (Dosing Information)</p>
+        <p className="text-xs text-muted">กรอกเป็นข้อมูลอ้างอิง ผู้ใช้จะเปิดดูเพื่อคำนวณขนาดยาเอง ไม่บังคับกรอกทุกช่อง</p>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">ขนาดยาผู้ใหญ่ (Usual adult dose)</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 500 mg PO q6h prn" rows={2} {...register('usualAdultDose')} />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">ขนาดยาเด็ก (Pediatric dose)</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 10-15 mg/kg/dose q6h" rows={2} {...register('pediatricDose')} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">ขนาดยาผู้สูงอายุ (Geriatric dose)</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="คำแนะนำสำหรับผู้สูงอายุ" rows={2} {...register('geriatricDose')} />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Loading dose</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 25 mg/kg loading แล้วตามด้วย maintenance" rows={2} {...register('loadingDose')} />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Renal impairment</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุการปรับขนาดตาม CrCl / CKD stage เช่น CrCl 30-50: ลด 50%; CrCl <30: ให้ q24h" rows={3} {...register('renalImpairment')} />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Hepatic impairment</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="ระบุการปรับขนาดตาม Child-Pugh / liver function" rows={3} {...register('hepaticImpairment')} />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Dialysis adjustment</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="HD / PD / CRRT — เช่น ให้ dose หลัง HD" rows={2} {...register('dialysisAdjustment')} />
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Max dose</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น 4 g/day หรือ 1 g/dose" rows={2} {...register('maxDose')} />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted">Monitoring parameters</label>
+            <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="เช่น trough level, SCr, AST/ALT" rows={2} {...register('monitoringParameters')} />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Administration</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="วิธีการบริหารยา เช่น รับประทานหลังอาหารทันที / IV push 3-5 นาที" rows={2} {...register('dosingAdministration')} />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted">Reconstitution</label>
+          <textarea className="w-full rounded-2xl border-0 bg-subtle px-4 py-2.5 text-sm" placeholder="วิธีผสมยาสำหรับยาฉีดผง" rows={2} {...register('reconstitution')} />
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

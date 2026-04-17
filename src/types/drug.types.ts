@@ -39,9 +39,20 @@ export type DrugStatus =
   | 'restrict_atb'
   | 'self_pay'
   | 'self_pay2';
-export type Population = 'adult' | 'pediatric' | 'neonatal' | 'geriatric';
-export type RuleType = 'fixed' | 'weight_based' | 'bsa_based' | 'crcl_adjusted' | 'age_based';
-export type Frequency = 'once' | 'bid' | 'tid' | 'qid' | 'q4h' | 'q6h' | 'q8h' | 'q12h' | 'q24h' | 'prn' | 'other';
+
+export interface DosingInformation {
+  usualAdultDose?: string;        // ขนาดยาผู้ใหญ่ตามข้อบ่งใช้
+  pediatricDose?: string;         // ขนาดยาเด็ก (mg/kg, ช่วงอายุ ฯลฯ)
+  geriatricDose?: string;         // คำแนะนำสำหรับผู้สูงอายุ
+  renalImpairment?: string;       // การปรับขนาดตาม CrCl / stage CKD
+  hepaticImpairment?: string;     // การปรับขนาดตาม Child-Pugh / liver function
+  dialysisAdjustment?: string;    // HD / PD / CRRT
+  loadingDose?: string;           // loading dose (ถ้ามี)
+  maxDose?: string;               // max per dose / per day
+  administration?: string;        // วิธีบริหาร เช่น IV push / infusion rate
+  reconstitution?: string;        // วิธีผสมสำหรับยาฉีดผง
+  monitoringParameters?: string;  // parameters ที่ต้องติดตาม
+}
 
 export interface InjectionInfo {
   diluent?: string;                  // Diluent / สารละลายที่ใช้เจือจาง
@@ -75,32 +86,10 @@ export interface Drug {
   pricePerUnit: number;
   status: DrugStatus;
   notes: string;
-  dosingInfo?: string;
+  dosing?: DosingInformation;
   injectionInfo?: InjectionInfo;
   imageUrl?: string;
   createdAt: string;
   updatedAt: string;
   updatedBy: string;
-}
-
-export interface DoseRule {
-  id: string;
-  drugId: string;
-  ruleName: string;
-  population: Population;
-  ruleType: RuleType;
-  doseValue?: number;
-  dosePerKg?: number;
-  dosePerM2?: number;
-  doseUnit: string;
-  frequency: Frequency;
-  minDose?: number;
-  maxDose?: number;
-  maxDailyDose?: number;
-  renalAdjust?: string;
-  hepaticAdjust?: string;
-  specialNotes?: string;
-  reference?: string;
-  createdAt: string;
-  updatedAt: string;
 }

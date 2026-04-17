@@ -97,10 +97,22 @@ export function DrugDetailModal({ drug, onClose }: DrugDetailModalProps): JSX.El
               </div>
 
               {/* Dosing information */}
-              {drug.dosingInfo ? (
+              {drug.dosing && Object.values(drug.dosing).some(Boolean) ? (
                 <article className="mt-4 rounded-[16px] border border-line p-4">
-                  <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการใช้ยา</h3>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-muted">{drug.dosingInfo}</p>
+                  <h3 className="text-xs font-medium uppercase tracking-[0.18em] text-primary">ข้อมูลการใช้ยา (Dosing Information)</h3>
+                  <dl className="mt-3 grid gap-3 text-sm">
+                    {drug.dosing.usualAdultDose && <div><dt className="font-semibold text-ink">Usual adult dose</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.usualAdultDose}</dd></div>}
+                    {drug.dosing.pediatricDose && <div><dt className="font-semibold text-ink">Pediatric dose</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.pediatricDose}</dd></div>}
+                    {drug.dosing.geriatricDose && <div><dt className="font-semibold text-ink">Geriatric dose</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.geriatricDose}</dd></div>}
+                    {drug.dosing.loadingDose && <div><dt className="font-semibold text-ink">Loading dose</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.loadingDose}</dd></div>}
+                    {drug.dosing.renalImpairment && <div><dt className="font-semibold text-ink">Renal impairment</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.renalImpairment}</dd></div>}
+                    {drug.dosing.hepaticImpairment && <div><dt className="font-semibold text-ink">Hepatic impairment</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.hepaticImpairment}</dd></div>}
+                    {drug.dosing.dialysisAdjustment && <div><dt className="font-semibold text-ink">Dialysis adjustment</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.dialysisAdjustment}</dd></div>}
+                    {drug.dosing.maxDose && <div><dt className="font-semibold text-ink">Max dose</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.maxDose}</dd></div>}
+                    {drug.dosing.monitoringParameters && <div><dt className="font-semibold text-ink">Monitoring parameters</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.monitoringParameters}</dd></div>}
+                    {drug.dosing.administration && <div><dt className="font-semibold text-ink">Administration</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.administration}</dd></div>}
+                    {drug.dosing.reconstitution && <div><dt className="font-semibold text-ink">Reconstitution</dt><dd className="mt-0.5 whitespace-pre-wrap text-muted">{drug.dosing.reconstitution}</dd></div>}
+                  </dl>
                 </article>
               ) : null}
 

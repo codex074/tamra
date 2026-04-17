@@ -1,4 +1,4 @@
-import type { DoseRule, Drug, IVCompatibility } from '@/types';
+import type { Drug, IVCompatibility } from '@/types';
 
 export const mockDrugs: Drug[] = [
   {
@@ -66,65 +66,6 @@ export const mockDrugs: Drug[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     updatedBy: 'system',
-  },
-];
-
-export const mockDoseRules: DoseRule[] = [
-  {
-    id: 'rule-1',
-    drugId: 'drug-1',
-    ruleName: 'Standard Adult Dose',
-    population: 'adult',
-    ruleType: 'fixed',
-    doseValue: 500,
-    doseUnit: 'mg',
-    frequency: 'q6h',
-    maxDose: 1000,
-    maxDailyDose: 4000,
-    specialNotes: 'ทบทวน cumulative dose เมื่อมี combination products',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'rule-2',
-    drugId: 'drug-1',
-    ruleName: 'Pediatric Weight-Based',
-    population: 'pediatric',
-    ruleType: 'weight_based',
-    dosePerKg: 15,
-    doseUnit: 'mg',
-    frequency: 'q6h',
-    maxDose: 650,
-    maxDailyDose: 2600,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'rule-3',
-    drugId: 'drug-2',
-    ruleName: 'Adult Infection Dose',
-    population: 'adult',
-    ruleType: 'fixed',
-    doseValue: 1000,
-    doseUnit: 'mg',
-    frequency: 'q24h',
-    renalAdjust: 'โดยทั่วไปไม่ต้องปรับขนาด แต่ทบทวนตาม clinical status',
-    specialNotes: 'หลีกเลี่ยงการผสมร่วมกับ calcium ในสายเดียวกัน',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'rule-4',
-    drugId: 'drug-3',
-    ruleName: 'Adult Malaria Course',
-    population: 'adult',
-    ruleType: 'fixed',
-    doseValue: 15,
-    doseUnit: 'mg',
-    frequency: 'q24h',
-    specialNotes: 'ต้อง confirm G6PD ก่อนทุกครั้ง',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   },
 ];
 
