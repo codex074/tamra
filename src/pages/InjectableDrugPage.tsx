@@ -268,7 +268,9 @@ export function InjectableDrugPage(): JSX.Element {
 
         <div className="divide-y divide-line">
           {paginatedDrugs.map((drug) => {
-            const label = formatDrugDisplayName(drug);
+            const displayName = drug.displayName?.trim();
+            const genericName = drug.genericName.trim();
+            const label = displayName ? `${displayName}_(${genericName})` : genericName;
 
             return (
               <button
@@ -302,9 +304,7 @@ export function InjectableDrugPage(): JSX.Element {
                     ) : null}
                     <p className="min-w-0 truncate text-sm font-medium text-ink">{label}</p>
                   </div>
-                  {drug.genericNameTH ? (
-                    <p className="min-w-0 truncate text-sm text-muted">{drug.genericNameTH}</p>
-                  ) : null}
+                  <p className="min-w-0 truncate text-sm text-muted">{drug.strength || '-'}</p>
                 </div>
 
                 <ChevronRightIcon className="shrink-0 text-primary" size={20} strokeWidth={1.5} />

@@ -6,7 +6,7 @@ import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { useDrugs } from '@/hooks/useDrugs';
 import { getStatusColor, normalizeDrugStatus } from '@/lib/drug-status';
-import { formatDrugDisplayName, getDisplayDosageForm } from '@/lib/utils';
+import { getDisplayDosageForm } from '@/lib/utils';
 import type { DosageForm, Drug } from '@/types';
 
 function getDosageFormLabel(dosageForm: DosageForm): string {
@@ -165,7 +165,9 @@ export function DrugFormularyPage(): JSX.Element {
         <div className="divide-y divide-line">
           {paginatedDrugs.map((drug) => {
             const statusColor = getStatusColor(drug.status);
-            const label = formatDrugDisplayName(drug);
+            const displayName = drug.displayName?.trim();
+            const genericName = drug.genericName.trim();
+            const label = displayName ? `${displayName}_(${genericName})` : genericName;
             const displayDosageForm = getDisplayDosageForm(drug) as DosageForm;
             const dosageFormLabel = getDosageFormLabel(displayDosageForm);
             const dosageFormTagClass = getDosageFormTagClass(displayDosageForm);
